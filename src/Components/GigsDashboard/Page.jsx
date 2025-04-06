@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowUpRight,
   ChevronDown,
@@ -41,15 +42,15 @@ export default function GigDashboard() {
         axiosInstance.get("/orders/pending"),
         axiosInstance.get("/transactions/earnings"),
       ]);
-
+  
       const gigsData = gigsResponse.data.data || [];
       setGigs(gigsData);
-
+  
       const pendingOrders = pendingOrdersResponse.data.data.length || 0;
       const totalViews = gigsData.reduce((sum, gig) => sum + (gig.views || 0), 0);
       const activeGigs = gigsData.filter(gig => gig.status === "ACTIVE").length;
       const monthlyEarnings = earningsResponse.data.data.reduce((sum, earning) => sum + (earning.amount || 0), 0);
-
+  
       setStats({
         activeGigs,
         pendingOrders,
@@ -58,7 +59,8 @@ export default function GigDashboard() {
       });
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      setError("Failed to load dashboard data. Please try again later.");
+      console.log("Error response:", err.response?.data); // Add this
+      setError(err.response?.data?.message || "Failed to load dashboard data. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -113,7 +115,9 @@ export default function GigDashboard() {
             </div>
             <button className="mt-6 md:mt-0 group inline-flex items-center px-6 py-3 rounded-full text-purple-700 bg-white hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl">
               <Plus className="w-5 h-5 mr-2" />
+              <Link to='/create-gig'>
               <span className="font-medium">Create New Gig</span>
+              </Link>
               <ArrowUpRight className="w-4 h-4 ml-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </button>
           </div>

@@ -1,5 +1,5 @@
 import { useState, useRef } from "react"
-import { useRouter } from "next/navigation"
+import { useNavigate } from "react-router-dom"
 import { Link } from "react-router-dom"
 import {
   ChevronDown,
@@ -22,7 +22,7 @@ import {
 } from "lucide-react"
 
 export default function CreateGigForm() {
-  const router = useRouter()
+  const router = useNavigate()
   const [currentStep, setCurrentStep] = useState(1)
   const [formData, setFormData] = useState({
     title: "",
@@ -47,6 +47,7 @@ export default function CreateGigForm() {
   })
 
   const [errors, setErrors] = useState({})
+  const [submissionError, setSubmissionError] = useState(null); // Add state for backend errors
   const [tagInput, setTagInput] = useState("")
   const [showMarkdownPreview, setShowMarkdownPreview] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
@@ -444,18 +445,64 @@ export default function CreateGigForm() {
   }
 
   // Form submission
-  const handleSubmit = (status) => {
+  const handleSubmit = async (status) => {
     if (status === "PUBLISH" && !validateForm()) {
-      return
+      return;
     }
 
-    // Here you would typically send the data to your backend
-    console.log("Submitting form with status:", status)
-    console.log("Form data:", formData)
+    setSubmissionError(null); // Reset previous errors
 
-    // Redirect to gigs dashboard with success message
-    router.push("/gigs-dashboard?success=true")
-  }
+    const gigData = new FormData();
+    gigData.append("title", formData.title);
+    gigData.append("category", formData.category);
+    gigData.append("description", formData.description);
+    gigData.append("pricing", JSON.stringify(formData.pricing)); // Stringify pricing array
+    gigData.append("deliveryTime", formData.pricing[0].deliveryTime); // Use first tier's delivery time
+    gigData.append(
+      "revisionCount",
+      formData.pricing[0].revisions === "Unlimited" ? null : formData.pricing[0].revisions
+    );
+    gigData.append("tags", JSON.stringify(formData.tags));
+    gigData.append("requirements", formData.requirements);
+    gigData.append("faqs", JSON.stringify(formData.faqs));
+    gigData.append("packageDetails", JSON.stringify(formData.addOns)); // Map addOns to packageDetails
+    if (status === "DRAFT") {
+      gigData.append("status", "DRAFT"); // Add status for draft
+    } else {
+      gigData.append("status", "ACTIVE"); // Default to ACTIVE for publish
+    }
+
+    // Append thumbnail
+    if (formData.thumbnail) {
+      gigData.append("thumbnail", formData.thumbnail);
+    }
+
+    // Append sample work as sampleMedia
+    formData.sampleWork.forEach((sample, index) => {
+      gigData.append(`sampleMedia[${index}][mediaUrl]`, sample.file); // File itself
+      gigData.append(`sampleMedia[${index}][mediaType]`, sample.type); // "image" or "video"
+    });
+
+    try {
+      const response = await axios.post("http://localhost:3000/api/v1/gig/", gigData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${localStorage.getItem("token")}`, // Adjust token retrieval as per your auth setup
+        },
+      });
+
+      console.log("Gig created successfully:", response.data);
+
+      // Redirect based on framework
+      router.push("/gigs-dashboard?success=true"); // For Next.js
+      // navigate("/gigs-dashboard?success=true"); // For React Router (uncomment if using React Router)
+    } catch (error) {
+      console.error("Error submitting gig:", error);
+      setSubmissionError(
+        error.response?.data?.message || "Failed to create gig. Please try again."
+      );
+    }
+  };
 
   // Navigation between form steps
   const nextStep = () => {
@@ -1293,6 +1340,57 @@ export default function CreateGigForm() {
             </div>
           </div>
         )
+        case 4:
+          return (
+            <div className="space-y-8">
+              {/* [Existing FAQs section unchanged] */}
+              {submissionError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                  <AlertCircle size={18} />
+                  <p>{submissionError}</p>
+                </div>
+              )}
+              <div className="flex flex-wrap md:flex-nowrap justify-between gap-4 pt-8">
+                <div className="flex gap-3 w-full md:w-auto">
+                  <Link to="/gigs-dashboard" className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium">
+                    Cancel
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleSubmit("DRAFT")}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+                  >
+                    <Save size={18} />
+                    Save as Draft
+                  </button>
+                </div>
+                <div className="flex gap-3 w-full md:w-auto">
+                  <button
+                    type="button"
+                    onClick={prevStep}
+                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="px-6 py-2 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
+                  >
+                    <Eye size={18} />
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSubmit("PUBLISH")}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  >
+                    Publish Gig
+                    <Check size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
 
       default:
         return null
