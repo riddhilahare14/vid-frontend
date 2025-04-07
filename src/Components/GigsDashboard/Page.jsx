@@ -18,7 +18,7 @@ import {
   TrendingUp,
   Video,
 } from "lucide-react";
-import axiosInstance from "../../utils/axios"; // Adjust path
+import axiosInstance from "../../utils/axios";
 
 export default function GigDashboard() {
   const [activeTab, setActiveTab] = useState("all");
@@ -42,15 +42,15 @@ export default function GigDashboard() {
         axiosInstance.get("/orders/pending"),
         axiosInstance.get("/transactions/earnings"),
       ]);
-  
+
       const gigsData = gigsResponse.data.data || [];
       setGigs(gigsData);
-  
+
       const pendingOrders = pendingOrdersResponse.data.data.length || 0;
       const totalViews = gigsData.reduce((sum, gig) => sum + (gig.views || 0), 0);
       const activeGigs = gigsData.filter(gig => gig.status === "ACTIVE").length;
       const monthlyEarnings = earningsResponse.data.data.reduce((sum, earning) => sum + (earning.amount || 0), 0);
-  
+
       setStats({
         activeGigs,
         pendingOrders,
@@ -59,7 +59,7 @@ export default function GigDashboard() {
       });
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      console.log("Error response:", err.response?.data); // Add this
+      console.log("Error response:", err.response?.data);
       setError(err.response?.data?.message || "Failed to load dashboard data. Please try again later.");
     } finally {
       setLoading(false);
@@ -74,7 +74,7 @@ export default function GigDashboard() {
     if (activeTab === "all") return true;
     if (activeTab === "active") return gig.status === "ACTIVE";
     if (activeTab === "paused") return gig.status === "PAUSED";
-    if (activeTab === "draft") return gig.status === "DELETED"; // Using "DELETED" as draft per your schema
+    if (activeTab === "draft") return gig.status === "DELETED"; // Adjust if "DRAFT" exists
     return false;
   });
 
@@ -115,8 +115,8 @@ export default function GigDashboard() {
             </div>
             <button className="mt-6 md:mt-0 group inline-flex items-center px-6 py-3 rounded-full text-purple-700 bg-white hover:bg-gray-50 transition-all shadow-lg hover:shadow-xl">
               <Plus className="w-5 h-5 mr-2" />
-              <Link to='/create-gig'>
-              <span className="font-medium">Create New Gig</span>
+              <Link to="/create-gig">
+                <span className="font-medium">Create New Gig</span>
               </Link>
               <ArrowUpRight className="w-4 h-4 ml-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </button>
@@ -326,7 +326,7 @@ export default function GigDashboard() {
                       <p className="text-sm font-medium text-gray-500">
                         Starting at{" "}
                         <span className="text-xl font-bold text-gray-900">
-                          ${Object.values(gig.pricing)[0] || 0}
+                          ${gig.pricing[0]?.price || 0} {/* Fixed */}
                         </span>
                       </p>
                       <div className="flex space-x-1">
@@ -431,7 +431,7 @@ export default function GigDashboard() {
                           {gig.orders?.length || 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${Object.values(gig.pricing)[0] || 0}
+                          ${gig.pricing[0]?.price || 0} {/* Fixed */}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex space-x-2">
