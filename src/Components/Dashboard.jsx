@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import axiosInstance from "../utils/axios";
-import PortfolioUpload from "../components/PortfolioUpload.jsx";
+//import PortfolioUpload from "../components/PortfolioUpload.jsx";
 
 function Dashboard() {
   const { id, firstname, role, token } = useSelector((state) => state.user);
@@ -54,7 +54,7 @@ function Dashboard() {
                   </li>
                 ))}
               </ul>
-              <PortfolioUpload />
+              
             </>
           ) : (
             <>

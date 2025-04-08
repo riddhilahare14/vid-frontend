@@ -51,6 +51,7 @@ const ChatDashboard = lazy(() => import('./Components/ChatEditorSection/dashboar
 const ClientProfile = lazy(() => import('./Components/ClientProfile/Page'));
 const GigDashboard = lazy(() => import('./Components/GigsDashboard/Page'));
 const CreateGigForm = lazy(() => import('./Components/GigsDashboard/GigForm'));
+const Settings = lazy(() => import('./Components/Settings/settings'));
 
 function NavbarPage() {
   const user = useSelector((state) => state.user.user);
@@ -149,6 +150,7 @@ function NavbarPage() {
             <Route path="/clientProfile" element={<ClientProfile />} />
             <Route path="/gigs-dashboard" element={<GigDashboard />} />
             <Route path="/create-gig" element={<CreateGigForm />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           </Routes>
         </Suspense>
