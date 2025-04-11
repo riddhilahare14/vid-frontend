@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom"; // Added useNavigate for redirection
 import {
   ArrowUpRight,
   ChevronDown,
@@ -32,6 +32,7 @@ export default function GigDashboard() {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate(); // For redirecting after delete
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -66,6 +67,22 @@ export default function GigDashboard() {
     }
   };
 
+  // Delete a gig
+  const handleDeleteGig = async (gigId, isDraft) => {
+    if (!window.confirm("Are you sure you want to delete this gig?")) return;
+
+    try {
+      const endpoint = isDraft ? `/gig/draft/${gigId}` : `/gig/${gigId}`;
+      await axiosInstance.delete(endpoint);
+      setGigs(gigs.filter(gig => gig.id !== gigId));
+      fetchDashboardData(); // Refresh stats after deletion
+      alert("Gig deleted successfully!");
+    } catch (err) {
+      console.error("Delete gig error:", err);
+      setError(err.response?.data?.message || "Failed to delete gig.");
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -74,7 +91,7 @@ export default function GigDashboard() {
     if (activeTab === "all") return true;
     if (activeTab === "active") return gig.status === "ACTIVE";
     if (activeTab === "paused") return gig.status === "PAUSED";
-    if (activeTab === "draft") return gig.status === "DELETED"; // Adjust if "DRAFT" exists
+    if (activeTab === "draft") return gig.status === "DRAFT"; // Corrected to "DRAFT"
     return false;
   });
 
@@ -297,6 +314,8 @@ export default function GigDashboard() {
                           ? "bg-green-500"
                           : gig.status === "PAUSED"
                           ? "bg-amber-500"
+                          : gig.status === "DRAFT"
+                          ? "bg-gray-500"
                           : "bg-gray-500"
                       }`}
                     >
@@ -325,14 +344,14 @@ export default function GigDashboard() {
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium text-gray-500">
                         Starting at{" "}
-                        <span className="text-xl font-bold text-gray-900">
-                          ${gig.pricing[0]?.price || 0} {/* Fixed */}
-                        </span>
+                        <span className="text-xl font-bold text-gray-900">${gig.pricing[0]?.price || 0}</span>
                       </p>
                       <div className="flex space-x-1">
-                        <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                          <Edit className="w-5 h-5 text-gray-500" />
-                        </button>
+                        <Link to={`/edit-gig/${gig.id}`}>
+                          <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                            <Edit className="w-5 h-5 text-gray-500" />
+                          </button>
+                        </Link>
                         <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
                           {gig.status === "ACTIVE" ? (
                             <Pause className="w-5 h-5 text-gray-500" />
@@ -340,8 +359,11 @@ export default function GigDashboard() {
                             <Play className="w-5 h-5 text-gray-500" />
                           )}
                         </button>
-                        <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                          <MoreHorizontal className="w-5 h-5 text-gray-500" />
+                        <button
+                          onClick={() => handleDeleteGig(gig.id, gig.status === "DRAFT")}
+                          className="p-2 rounded-full hover:bg-red-100 transition-colors"
+                        >
+                          <Trash className="w-5 h-5 text-red-500" />
                         </button>
                       </div>
                     </div>
@@ -415,6 +437,8 @@ export default function GigDashboard() {
                                 ? "bg-green-100 text-green-800"
                                 : gig.status === "PAUSED"
                                 ? "bg-amber-100 text-amber-800"
+                                : gig.status === "DRAFT"
+                                ? "bg-gray-100 text-gray-800"
                                 : "bg-gray-100 text-gray-800"
                             }`}
                           >
@@ -431,13 +455,15 @@ export default function GigDashboard() {
                           {gig.orders?.length || 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          ${gig.pricing[0]?.price || 0} {/* Fixed */}
+                          ${gig.pricing[0]?.price || 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex space-x-2">
-                            <button className="text-indigo-600 hover:text-indigo-900 font-medium">
-                              Edit
-                            </button>
+                            <Link to={`/edit-gig/${gig.id}`}>
+                              <button className="text-indigo-600 hover:text-indigo-900 font-medium">
+                                Edit
+                              </button>
+                            </Link>
                             <button
                               className={`${
                                 gig.status === "ACTIVE"
@@ -447,7 +473,10 @@ export default function GigDashboard() {
                             >
                               {gig.status === "ACTIVE" ? "Pause" : "Activate"}
                             </button>
-                            <button className="text-red-600 hover:text-red-900 font-medium">
+                            <button
+                              onClick={() => handleDeleteGig(gig.id, gig.status === "DRAFT")}
+                              className="text-red-600 hover:text-red-900 font-medium"
+                            >
                               Delete
                             </button>
                           </div>

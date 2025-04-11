@@ -1,6 +1,5 @@
-import { useState, useRef } from "react"
-import { useNavigate } from "react-router-dom"
-import { Link } from "react-router-dom"
+import { useState, useRef } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import {
   ChevronDown,
   ChevronRight,
@@ -19,11 +18,12 @@ import {
   HelpCircle,
   FileText,
   Film,
-} from "lucide-react"
+} from "lucide-react";
+import axiosInstance from "../../utils/axios";
 
 export default function CreateGigForm() {
-  const router = useNavigate()
-  const [currentStep, setCurrentStep] = useState(1)
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -44,17 +44,20 @@ export default function CreateGigForm() {
     requirements: "",
     faqs: [],
     sampleWork: [],
-  })
+  });
 
-  const [errors, setErrors] = useState({})
-  const [submissionError, setSubmissionError] = useState(null); // Add state for backend errors
-  const [tagInput, setTagInput] = useState("")
-  const [showMarkdownPreview, setShowMarkdownPreview] = useState(false)
-  const [isDragging, setIsDragging] = useState(false)
-  const fileInputRef = useRef(null)
+  const [errors, setErrors] = useState({});
+  const [submissionError, setSubmissionError] = useState(null);
+  const [tagInput, setTagInput] = useState("");
+  const [showMarkdownPreview, setShowMarkdownPreview] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showResultModal, setShowResultModal] = useState(false);
+  const [resultStatus, setResultStatus] = useState(null); // "success" or "error"
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const fileInputRef = useRef(null);
 
-  const categories = ["Video Editing", "Motion Graphics", "Color Grading", "Animation", "VFX", "Other"]
-
+  const categories = ["Video Editing", "Motion Graphics", "Color Grading", "Animation", "VFX", "Other"];
   const popularTags = [
     "YouTube",
     "Wedding",
@@ -66,398 +69,207 @@ export default function CreateGigForm() {
     "Commercial",
     "Documentary",
     "Cinematic",
-  ]
-
-  const deliveryTimeOptions = ["1", "2", "3", "5", "7", "14", "21", "30"]
-
-  const revisionOptions = ["1", "2", "3", "5", "Unlimited"]
+  ];
+  const deliveryTimeOptions = ["1", "2", "3", "5", "7", "14", "21", "30"];
+  const revisionOptions = ["1", "2", "3", "5", "Unlimited"];
 
   // Handle form field changes
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData({
-      ...formData,
-      [name]: value,
-    })
-
-    // Clear error when user types
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: null,
-      })
-    }
-  }
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    if (errors[name]) setErrors({ ...errors, [name]: null });
+  };
 
   // Handle thumbnail upload
   const handleThumbnailUpload = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
       if (file.size > 10 * 1024 * 1024) {
-        setErrors({
-          ...errors,
-          thumbnail: "File size must be less than 10MB",
-        })
-        return
+        setErrors({ ...errors, thumbnail: "File size must be less than 10MB" });
+        return;
       }
-
-      const fileType = file.type
+      const fileType = file.type;
       if (!fileType.match(/image\/(jpeg|png)/) && !fileType.match(/video\/mp4/)) {
-        setErrors({
-          ...errors,
-          thumbnail: "File must be JPEG, PNG, or MP4",
-        })
-        return
+        setErrors({ ...errors, thumbnail: "File must be JPEG, PNG, or MP4" });
+        return;
       }
-
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = () => {
-        setFormData({
-          ...formData,
-          thumbnail: file,
-          thumbnailPreview: reader.result,
-        })
-
-        if (errors.thumbnail) {
-          setErrors({
-            ...errors,
-            thumbnail: null,
-          })
-        }
-      }
-      reader.readAsDataURL(file)
+        setFormData({ ...formData, thumbnail: file, thumbnailPreview: reader.result });
+        if (errors.thumbnail) setErrors({ ...errors, thumbnail: null });
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   // Handle drag and drop for thumbnail
   const handleDragOver = (e) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
   const handleDragLeave = () => {
-    setIsDragging(false)
-  }
+    setIsDragging(false);
+  };
 
   const handleDrop = (e) => {
-    e.preventDefault()
-    setIsDragging(false)
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) handleThumbnailUpload({ target: { files: [file] } });
+  };
 
-    const file = e.dataTransfer.files[0]
-    if (file) {
-      if (file.size > 10 * 1024 * 1024) {
-        setErrors({
-          ...errors,
-          thumbnail: "File size must be less than 10MB",
-        })
-        return
-      }
-
-      const fileType = file.type
-      if (!fileType.match(/image\/(jpeg|png)/) && !fileType.match(/video\/mp4/)) {
-        setErrors({
-          ...errors,
-          thumbnail: "File must be JPEG, PNG, or MP4",
-        })
-        return
-      }
-
-      const reader = new FileReader()
-      reader.onload = () => {
-        setFormData({
-          ...formData,
-          thumbnail: file,
-          thumbnailPreview: reader.result,
-        })
-
-        if (errors.thumbnail) {
-          setErrors({
-            ...errors,
-            thumbnail: null,
-          })
-        }
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  // Handle tag input
-  const handleTagInput = (e) => {
-    setTagInput(e.target.value)
-  }
-
+  // Handle tags
+  const handleTagInput = (e) => setTagInput(e.target.value);
   const addTag = (tag) => {
     if (tag && formData.tags.length < 10 && !formData.tags.includes(tag)) {
-      setFormData({
-        ...formData,
-        tags: [...formData.tags, tag],
-      })
-      setTagInput("")
+      setFormData({ ...formData, tags: [...formData.tags, tag] });
+      setTagInput("");
     }
-  }
-
+  };
   const handleTagKeyDown = (e) => {
     if (e.key === "Enter" || e.key === ",") {
-      e.preventDefault()
-      addTag(tagInput.trim())
+      e.preventDefault();
+      addTag(tagInput.trim());
     }
-  }
-
-  const removeTag = (tagToRemove) => {
-    setFormData({
-      ...formData,
-      tags: formData.tags.filter((tag) => tag !== tagToRemove),
-    })
-  }
+  };
+  const removeTag = (tagToRemove) =>
+    setFormData({ ...formData, tags: formData.tags.filter((tag) => tag !== tagToRemove) });
 
   // Handle pricing tiers
   const addPricingTier = () => {
     if (formData.pricing.length < 3) {
-      const tierNames = ["Basic", "Standard", "Premium"]
-      const newTier = {
-        name: tierNames[formData.pricing.length],
-        price: "",
-        deliveryTime: "3",
-        revisions: "1",
-        description: "",
-      }
-
+      const tierNames = ["Basic", "Standard", "Premium"];
       setFormData({
         ...formData,
-        pricing: [...formData.pricing, newTier],
-      })
+        pricing: [
+          ...formData.pricing,
+          { name: tierNames[formData.pricing.length], price: "", deliveryTime: "3", revisions: "1", description: "" },
+        ],
+      });
     }
-  }
-
+  };
   const removePricingTier = (index) => {
     if (formData.pricing.length > 1) {
-      const newPricing = formData.pricing.filter((_, i) => i !== index)
-      setFormData({
-        ...formData,
-        pricing: newPricing,
-      })
+      setFormData({ ...formData, pricing: formData.pricing.filter((_, i) => i !== index) });
     }
-  }
-
+  };
   const updatePricingTier = (index, field, value) => {
-    const newPricing = [...formData.pricing]
-    newPricing[index] = {
-      ...newPricing[index],
-      [field]: value,
-    }
-
-    setFormData({
-      ...formData,
-      pricing: newPricing,
-    })
-  }
+    const newPricing = [...formData.pricing];
+    newPricing[index] = { ...newPricing[index], [field]: value };
+    setFormData({ ...formData, pricing: newPricing });
+  };
 
   // Handle add-ons
   const addAddOn = () => {
     if (formData.addOns.length < 5) {
-      const newAddOn = {
-        name: "",
-        price: "",
-        description: "",
-      }
-
       setFormData({
         ...formData,
-        addOns: [...formData.addOns, newAddOn],
-      })
+        addOns: [...formData.addOns, { name: "", price: "", description: "" }],
+      });
     }
-  }
-
-  const removeAddOn = (index) => {
-    const newAddOns = formData.addOns.filter((_, i) => i !== index)
-    setFormData({
-      ...formData,
-      addOns: newAddOns,
-    })
-  }
-
+  };
+  const removeAddOn = (index) =>
+    setFormData({ ...formData, addOns: formData.addOns.filter((_, i) => i !== index) });
   const updateAddOn = (index, field, value) => {
-    const newAddOns = [...formData.addOns]
-    newAddOns[index] = {
-      ...newAddOns[index],
-      [field]: value,
-    }
-
-    setFormData({
-      ...formData,
-      addOns: newAddOns,
-    })
-  }
+    const newAddOns = [...formData.addOns];
+    newAddOns[index] = { ...newAddOns[index], [field]: value };
+    setFormData({ ...formData, addOns: newAddOns });
+  };
 
   // Handle FAQs
   const addFaq = () => {
     if (formData.faqs.length < 5) {
-      const newFaq = {
-        question: "",
-        answer: "",
-      }
-
-      setFormData({
-        ...formData,
-        faqs: [...formData.faqs, newFaq],
-      })
+      setFormData({ ...formData, faqs: [...formData.faqs, { question: "", answer: "" }] });
     }
-  }
-
-  const removeFaq = (index) => {
-    const newFaqs = formData.faqs.filter((_, i) => i !== index)
-    setFormData({
-      ...formData,
-      faqs: newFaqs,
-    })
-  }
-
+  };
+  const removeFaq = (index) => setFormData({ ...formData, faqs: formData.faqs.filter((_, i) => i !== index) });
   const updateFaq = (index, field, value) => {
-    const newFaqs = [...formData.faqs]
-    newFaqs[index] = {
-      ...newFaqs[index],
-      [field]: value,
-    }
-
-    setFormData({
-      ...formData,
-      faqs: newFaqs,
-    })
-  }
+    const newFaqs = [...formData.faqs];
+    newFaqs[index] = { ...newFaqs[index], [field]: value };
+    setFormData({ ...formData, faqs: newFaqs });
+  };
 
   // Handle sample work
   const addSampleWork = (file) => {
     if (formData.sampleWork.length < 3) {
       if (file.size > 10 * 1024 * 1024) {
-        setErrors({
-          ...errors,
-          sampleWork: "File size must be less than 10MB",
-        })
-        return
+        setErrors({ ...errors, sampleWork: "File size must be less than 10MB" });
+        return;
       }
-
-      const fileType = file.type
+      const fileType = file.type;
       if (!fileType.match(/image\/(jpeg|png)/) && !fileType.match(/video\/mp4/)) {
-        setErrors({
-          ...errors,
-          sampleWork: "File must be JPEG, PNG, or MP4",
-        })
-        return
+        setErrors({ ...errors, sampleWork: "File must be JPEG, PNG, or MP4" });
+        return;
       }
-
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = () => {
-        const newSample = {
-          file,
-          preview: reader.result,
-          type: file.type.includes("video") ? "video" : "image",
-        }
-
         setFormData({
           ...formData,
-          sampleWork: [...formData.sampleWork, newSample],
-        })
-
-        if (errors.sampleWork) {
-          setErrors({
-            ...errors,
-            sampleWork: null,
-          })
-        }
-      }
-      reader.readAsDataURL(file)
+          sampleWork: [
+            ...formData.sampleWork,
+            { file, preview: reader.result, type: file.type.includes("video") ? "video" : "image" },
+          ],
+        });
+        if (errors.sampleWork) setErrors({ ...errors, sampleWork: null });
+      };
+      reader.readAsDataURL(file);
     }
-  }
-
+  };
   const handleSampleWorkUpload = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      addSampleWork(file)
-    }
-  }
-
-  const removeSampleWork = (index) => {
-    const newSampleWork = formData.sampleWork.filter((_, i) => i !== index)
-    setFormData({
-      ...formData,
-      sampleWork: newSampleWork,
-    })
-  }
+    const file = e.target.files[0];
+    if (file) addSampleWork(file);
+  };
+  const removeSampleWork = (index) =>
+    setFormData({ ...formData, sampleWork: formData.sampleWork.filter((_, i) => i !== index) });
 
   // Form validation
   const validateForm = () => {
-    const newErrors = {}
+    const newErrors = {};
+    if (!formData.title) newErrors.title = "Title is required";
+    else if (formData.title.length < 5) newErrors.title = "Title must be at least 5 characters";
+    else if (formData.title.length > 60) newErrors.title = "Title must be less than 60 characters";
 
-    // Title validation
-    if (!formData.title) {
-      newErrors.title = "Title is required"
-    } else if (formData.title.length < 5) {
-      newErrors.title = "Title must be at least 5 characters"
-    } else if (formData.title.length > 60) {
-      newErrors.title = "Title must be less than 60 characters"
-    }
+    if (!formData.category) newErrors.category = "Category is required";
 
-    // Category validation
-    if (!formData.category) {
-      newErrors.category = "Category is required"
-    }
+    if (!formData.description) newErrors.description = "Description is required";
+    else if (formData.description.length < 50) newErrors.description = "Description must be at least 50 characters";
+    else if (formData.description.length > 1000) newErrors.description = "Description must be less than 1000 characters";
 
-    // Description validation
-    if (!formData.description) {
-      newErrors.description = "Description is required"
-    } else if (formData.description.length < 50) {
-      newErrors.description = "Description must be at least 50 characters"
-    } else if (formData.description.length > 1000) {
-      newErrors.description = "Description must be less than 1000 characters"
-    }
-
-    // Pricing validation
-    const pricingErrors = []
+    const pricingErrors = [];
     formData.pricing.forEach((tier, index) => {
-      const tierErrors = {}
+      const tierErrors = {};
+      if (!tier.price) tierErrors.price = "Price is required";
+      else if (isNaN(tier.price) || Number(tier.price) < 5 || Number(tier.price) > 10000)
+        tierErrors.price = "Price must be between $5 and $10,000";
+      if (!tier.deliveryTime) tierErrors.deliveryTime = "Delivery time is required";
+      if (Object.keys(tierErrors).length > 0) pricingErrors[index] = tierErrors;
+    });
+    if (pricingErrors.length > 0) newErrors.pricing = pricingErrors;
 
-      if (!tier.price) {
-        tierErrors.price = "Price is required"
-      } else if (isNaN(tier.price) || Number(tier.price) < 5 || Number(tier.price) > 10000) {
-        tierErrors.price = "Price must be between $5 and $10,000"
-      }
+    if (!formData.thumbnail) newErrors.thumbnail = "Thumbnail is required";
 
-      if (!tier.deliveryTime) {
-        tierErrors.deliveryTime = "Delivery time is required"
-      }
-
-      if (Object.keys(tierErrors).length > 0) {
-        pricingErrors[index] = tierErrors
-      }
-    })
-
-    if (pricingErrors.length > 0) {
-      newErrors.pricing = pricingErrors
-    }
-
-    // Thumbnail validation
-    if (!formData.thumbnail) {
-      newErrors.thumbnail = "Thumbnail is required"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   // Form submission
   const handleSubmit = async (status) => {
-    if (status === "PUBLISH" && !validateForm()) {
+    if (status === "ACTIVE" && !validateForm()) return;
+    if (status === "DRAFT" && !formData.title) {
+      setErrors({ ...errors, title: "Title is required for draft" });
       return;
     }
 
-    setSubmissionError(null); // Reset previous errors
+    setIsSubmitting(true);
+    setSubmissionError(null);
 
     const gigData = new FormData();
     gigData.append("title", formData.title);
     gigData.append("category", formData.category);
     gigData.append("description", formData.description);
-    gigData.append("pricing", JSON.stringify(formData.pricing)); // Stringify pricing array
-    gigData.append("deliveryTime", formData.pricing[0].deliveryTime); // Use first tier's delivery time
+    gigData.append("pricing", JSON.stringify(formData.pricing));
+    gigData.append("deliveryTime", formData.pricing[0].deliveryTime);
     gigData.append(
       "revisionCount",
       formData.pricing[0].revisions === "Unlimited" ? null : formData.pricing[0].revisions
@@ -465,55 +277,49 @@ export default function CreateGigForm() {
     gigData.append("tags", JSON.stringify(formData.tags));
     gigData.append("requirements", formData.requirements);
     gigData.append("faqs", JSON.stringify(formData.faqs));
-    gigData.append("packageDetails", JSON.stringify(formData.addOns)); // Map addOns to packageDetails
-    if (status === "DRAFT") {
-      gigData.append("status", "DRAFT"); // Add status for draft
-    } else {
-      gigData.append("status", "ACTIVE"); // Default to ACTIVE for publish
-    }
+    gigData.append("packageDetails", JSON.stringify(formData.addOns));
+    gigData.append("status", status);
 
-    // Append thumbnail
-    if (formData.thumbnail) {
-      gigData.append("thumbnail", formData.thumbnail);
-    }
-
-    // Append sample work as sampleMedia
-    formData.sampleWork.forEach((sample, index) => {
-      gigData.append(`sampleMedia[${index}][mediaUrl]`, sample.file); // File itself
-      gigData.append(`sampleMedia[${index}][mediaType]`, sample.type); // "image" or "video"
-    });
+    // if (formData.thumbnail) gigData.append("thumbnail", formData.thumbnail);
+    // formData.sampleWork.forEach((sample, index) => {
+    //   gigData.append(`sampleMedia[${index}][mediaUrl]`, sample.file);
+    //   gigData.append(`sampleMedia[${index}][mediaType]`, sample.type);
+    // });
 
     try {
-      const response = await axios.post("http://localhost:3000/api/v1/gig/", gigData, {
+      const endpoint = status === "DRAFT" ? "/gig/draft" : "/gig/";
+      const response = await axiosInstance.post(`${endpoint}`, gigData, {
         headers: {
           "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`, // Adjust token retrieval as per your auth setup
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
       });
 
-      console.log("Gig created successfully:", response.data);
-
-      // Redirect based on framework
-      router.push("/gigs-dashboard?success=true"); // For Next.js
-      // navigate("/gigs-dashboard?success=true"); // For React Router (uncomment if using React Router)
+      console.log(`Gig ${status === "ACTIVE" ? "published" : "saved as draft"} successfully:`, response.data);
+      if (status === "ACTIVE") {
+        setResultStatus("success");
+        setShowResultModal(true);
+      } else {
+        navigate("/gigs-dashboard?draft=true");
+      }
     } catch (error) {
-      console.error("Error submitting gig:", error);
-      setSubmissionError(
-        error.response?.data?.message || "Failed to create gig. Please try again."
-      );
+      console.error(`Error ${status === "ACTIVE" ? "publishing" : "saving"} gig:`, error);
+      const errorMessage =
+        error.response?.data?.message || `Failed to ${status === "ACTIVE" ? "publish" : "save"} gig. Please try again.`;
+      setSubmissionError(errorMessage);
+      if (status === "ACTIVE") {
+        setResultStatus("error");
+        setShowResultModal(true);
+      }
+    } finally {
+      setIsSubmitting(false);
+      if (status === "ACTIVE") setShowConfirmModal(false);
     }
   };
 
-  // Navigation between form steps
-  const nextStep = () => {
-    setCurrentStep(currentStep + 1)
-  }
+  const nextStep = () => setCurrentStep(currentStep + 1);
+  const prevStep = () => setCurrentStep(currentStep - 1);
 
-  const prevStep = () => {
-    setCurrentStep(currentStep - 1)
-  }
-
-  // Render form based on current step
   const renderFormStep = () => {
     switch (currentStep) {
       case 1:
@@ -527,7 +333,6 @@ export default function CreateGigForm() {
               <p className="text-gray-500">Let clients know what you offer and why they should choose you.</p>
             </div>
 
-            {/* Title */}
             <div className="space-y-2">
               <div className="flex justify-between">
                 <label htmlFor="title" className="block font-medium">
@@ -556,12 +361,8 @@ export default function CreateGigForm() {
                 )}
               </div>
               {errors.title && <p className="text-red-500 text-sm mt-1">{errors.title}</p>}
-              <p className="text-sm text-gray-500">
-                A catchy title helps your gig stand out and appear in search results.
-              </p>
             </div>
 
-            {/* Category */}
             <div className="space-y-2">
               <label htmlFor="category" className="block font-medium">
                 Category
@@ -595,10 +396,8 @@ export default function CreateGigForm() {
                 )}
               </div>
               {errors.category && <p className="text-red-500 text-sm mt-1">{errors.category}</p>}
-              <p className="text-sm text-gray-500">Choose a category to help clients find your gig.</p>
             </div>
 
-            {/* Description */}
             <div className="space-y-2">
               <div className="flex justify-between">
                 <label htmlFor="description" className="block font-medium">
@@ -627,7 +426,6 @@ export default function CreateGigForm() {
                   </span>
                 </div>
               </div>
-
               {!showMarkdownPreview ? (
                 <div className="relative">
                   <textarea
@@ -652,12 +450,7 @@ export default function CreateGigForm() {
                   {formData.description || "No description yet."}
                 </div>
               )}
-
               {errors.description && <p className="text-red-500 text-sm mt-1">{errors.description}</p>}
-              <div className="text-sm text-gray-500 space-y-1">
-                <p>Markdown supported: **bold**, *italic*, - bullet points</p>
-                <p>Minimum 50 characters required. Be specific about what you offer.</p>
-              </div>
             </div>
 
             <div className="flex justify-between pt-6">
@@ -674,7 +467,7 @@ export default function CreateGigForm() {
               </button>
             </div>
           </div>
-        )
+        );
 
       case 2:
         return (
@@ -687,7 +480,6 @@ export default function CreateGigForm() {
               <p className="text-gray-500">Define your service tiers and pricing structure.</p>
             </div>
 
-            {/* Pricing Tiers */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h4 className="font-medium">Pricing Tiers</h4>
@@ -702,7 +494,6 @@ export default function CreateGigForm() {
                   </button>
                 )}
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {formData.pricing.map((tier, index) => (
                   <div
@@ -711,8 +502,8 @@ export default function CreateGigForm() {
                       index === 0
                         ? "border-purple-200 bg-purple-50"
                         : index === 1
-                          ? "border-blue-200 bg-blue-50"
-                          : "border-teal-200 bg-teal-50"
+                        ? "border-blue-200 bg-blue-50"
+                        : "border-teal-200 bg-teal-50"
                     }`}
                   >
                     {formData.pricing.length > 1 && (
@@ -724,25 +515,19 @@ export default function CreateGigForm() {
                         <X size={18} />
                       </button>
                     )}
-
                     <div className="space-y-4">
-                      {/* Package Name */}
-                      <div>
-                        <input
-                          type="text"
-                          value={tier.name}
-                          onChange={(e) => updatePricingTier(index, "name", e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none ${
-                            index === 0
-                              ? "border-purple-300 focus:border-purple-500"
-                              : index === 1
-                                ? "border-blue-300 focus:border-blue-500"
-                                : "border-teal-300 focus:border-teal-500"
-                          }`}
-                        />
-                      </div>
-
-                      {/* Price */}
+                      <input
+                        type="text"
+                        value={tier.name}
+                        onChange={(e) => updatePricingTier(index, "name", e.target.value)}
+                        className={`w-full px-3 py-2 border rounded-lg focus:outline-none ${
+                          index === 0
+                            ? "border-purple-300 focus:border-purple-500"
+                            : index === 1
+                            ? "border-blue-300 focus:border-blue-500"
+                            : "border-teal-300 focus:border-teal-500"
+                        }`}
+                      />
                       <div className="space-y-1">
                         <label className="block text-sm font-medium">Price</label>
                         <div className="relative">
@@ -765,8 +550,6 @@ export default function CreateGigForm() {
                           <p className="text-red-500 text-xs">{errors.pricing[index].price}</p>
                         )}
                       </div>
-
-                      {/* Delivery Time */}
                       <div className="space-y-1">
                         <label className="block text-sm font-medium">Delivery Time</label>
                         <div className="relative">
@@ -793,8 +576,6 @@ export default function CreateGigForm() {
                           <p className="text-red-500 text-xs">{errors.pricing[index].deliveryTime}</p>
                         )}
                       </div>
-
-                      {/* Revisions */}
                       <div className="space-y-1">
                         <label className="block text-sm font-medium">Revisions</label>
                         <div className="relative">
@@ -814,8 +595,6 @@ export default function CreateGigForm() {
                           </div>
                         </div>
                       </div>
-
-                      {/* Description */}
                       <div className="space-y-1">
                         <label className="block text-sm font-medium">Description</label>
                         <textarea
@@ -832,7 +611,6 @@ export default function CreateGigForm() {
               </div>
             </div>
 
-            {/* Add-Ons */}
             <div className="space-y-6 pt-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -850,7 +628,6 @@ export default function CreateGigForm() {
                   </button>
                 )}
               </div>
-
               {formData.addOns.length > 0 ? (
                 <div className="space-y-4">
                   {formData.addOns.map((addOn, index) => (
@@ -868,7 +645,6 @@ export default function CreateGigForm() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
                         />
                       </div>
-
                       <div className="w-full md:w-1/5">
                         <label className="block text-sm font-medium mb-1">Price</label>
                         <div className="relative">
@@ -884,7 +660,6 @@ export default function CreateGigForm() {
                           />
                         </div>
                       </div>
-
                       <div className="w-full md:w-2/5">
                         <label className="block text-sm font-medium mb-1">Description</label>
                         <input
@@ -895,7 +670,6 @@ export default function CreateGigForm() {
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
                         />
                       </div>
-
                       <div className="flex items-center justify-center pt-6 md:pt-0">
                         <button
                           type="button"
@@ -940,7 +714,7 @@ export default function CreateGigForm() {
               </button>
             </div>
           </div>
-        )
+        );
 
       case 3:
         return (
@@ -953,20 +727,18 @@ export default function CreateGigForm() {
               <p className="text-gray-500">Upload media to showcase your work and set client expectations.</p>
             </div>
 
-            {/* Thumbnail */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <label className="block font-medium">Gig Thumbnail</label>
                 <div className="text-xs text-gray-500">Max size: 10MB (JPEG, PNG, MP4)</div>
               </div>
-
               <div
                 className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
                   isDragging
                     ? "border-purple-500 bg-purple-50"
                     : errors.thumbnail
-                      ? "border-red-300 bg-red-50"
-                      : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
+                    ? "border-red-300 bg-red-50"
+                    : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
                 }`}
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -981,21 +753,13 @@ export default function CreateGigForm() {
                         <img
                           src={formData.thumbnailPreview || "/placeholder.svg"}
                           alt="Thumbnail preview"
-                          width={300}
-                          height={200}
                           className="w-full h-auto object-cover"
                         />
                       )}
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setFormData({
-                          ...formData,
-                          thumbnail: null,
-                          thumbnailPreview: "",
-                        })
-                      }}
+                      onClick={() => setFormData({ ...formData, thumbnail: null, thumbnailPreview: "" })}
                       className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
                     >
                       <X size={18} className="text-gray-700" />
@@ -1028,15 +792,9 @@ export default function CreateGigForm() {
                   </div>
                 )}
               </div>
-
               {errors.thumbnail && <p className="text-red-500 text-sm">{errors.thumbnail}</p>}
-              <p className="text-sm text-gray-500">
-                Your thumbnail is the first thing clients see. Choose a high-quality image or video that represents your
-                work.
-              </p>
             </div>
 
-            {/* Tags */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1045,7 +803,6 @@ export default function CreateGigForm() {
                 </div>
                 <div className="text-xs text-gray-500">Max 10 tags</div>
               </div>
-
               <div className="space-y-3">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3">
@@ -1061,7 +818,6 @@ export default function CreateGigForm() {
                     disabled={formData.tags.length >= 10}
                   />
                 </div>
-
                 {formData.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {formData.tags.map((tag, index) => (
@@ -1081,7 +837,6 @@ export default function CreateGigForm() {
                     ))}
                   </div>
                 )}
-
                 <div className="pt-2">
                   <p className="text-sm text-gray-500 mb-2">Popular tags:</p>
                   <div className="flex flex-wrap gap-2">
@@ -1105,7 +860,6 @@ export default function CreateGigForm() {
               </div>
             </div>
 
-            {/* Requirements */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1116,7 +870,6 @@ export default function CreateGigForm() {
                 </div>
                 <div className="text-xs text-gray-500">{formData.requirements.length}/500</div>
               </div>
-
               <textarea
                 id="requirements"
                 name="requirements"
@@ -1127,13 +880,8 @@ export default function CreateGigForm() {
                 maxLength={500}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
               />
-
-              <p className="text-sm text-gray-500">
-                Let clients know what you need from them to start working on their order.
-              </p>
             </div>
 
-            {/* Sample Work */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -1142,20 +890,13 @@ export default function CreateGigForm() {
                 </div>
                 <div className="text-xs text-gray-500">Max 3 samples</div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {formData.sampleWork.map((sample, index) => (
                   <div key={index} className="relative border rounded-lg overflow-hidden">
                     {sample.type === "video" ? (
                       <video src={sample.preview} className="w-full h-48 object-cover" controls />
                     ) : (
-                      <Image
-                        src={sample.preview || "/placeholder.svg"}
-                        alt={`Sample work ${index + 1}`}
-                        width={300}
-                        height={200}
-                        className="w-full h-48 object-cover"
-                      />
+                      <img src={sample.preview} alt={`Sample work ${index + 1}`} className="w-full h-48 object-cover" />
                     )}
                     <button
                       type="button"
@@ -1166,7 +907,6 @@ export default function CreateGigForm() {
                     </button>
                   </div>
                 ))}
-
                 {formData.sampleWork.length < 3 && (
                   <div
                     className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center h-48 text-center cursor-pointer hover:border-purple-400 hover:bg-gray-50 transition-colors"
@@ -1185,7 +925,6 @@ export default function CreateGigForm() {
                   </div>
                 )}
               </div>
-
               {errors.sampleWork && <p className="text-red-500 text-sm">{errors.sampleWork}</p>}
             </div>
 
@@ -1207,7 +946,7 @@ export default function CreateGigForm() {
               </button>
             </div>
           </div>
-        )
+        );
 
       case 4:
         return (
@@ -1220,7 +959,6 @@ export default function CreateGigForm() {
               <p className="text-gray-500">Add FAQs to answer common client questions.</p>
             </div>
 
-            {/* FAQs */}
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
@@ -1237,7 +975,6 @@ export default function CreateGigForm() {
                   </button>
                 )}
               </div>
-
               {formData.faqs.length > 0 ? (
                 <div className="space-y-4">
                   {formData.faqs.map((faq, index) => (
@@ -1255,7 +992,6 @@ export default function CreateGigForm() {
                           <X size={18} />
                         </button>
                       </div>
-
                       <div className="space-y-3">
                         <input
                           type="text"
@@ -1264,7 +1000,6 @@ export default function CreateGigForm() {
                           placeholder="e.g., Can you add subtitles?"
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
                         />
-
                         <textarea
                           value={faq.answer}
                           onChange={(e) => updateFaq(index, "answer", e.target.value)}
@@ -1291,13 +1026,15 @@ export default function CreateGigForm() {
                   </button>
                 </div>
               )}
-
-              <p className="text-sm text-gray-500">
-                FAQs help reduce back-and-forth with clients and can increase your order rate.
-              </p>
             </div>
 
-            {/* Form Actions */}
+            {submissionError && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
+                <AlertCircle size={18} />
+                <p>{submissionError}</p>
+              </div>
+            )}
+
             <div className="flex flex-wrap md:flex-nowrap justify-between gap-4 pt-8">
               <div className="flex gap-3 w-full md:w-auto">
                 <Link to="/gigs-dashboard" className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium">
@@ -1306,13 +1043,13 @@ export default function CreateGigForm() {
                 <button
                   type="button"
                   onClick={() => handleSubmit("DRAFT")}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
                   <Save size={18} />
                   Save as Draft
                 </button>
               </div>
-
               <div className="flex gap-3 w-full md:w-auto">
                 <button
                   type="button"
@@ -1323,79 +1060,104 @@ export default function CreateGigForm() {
                 </button>
                 <button
                   type="button"
-                  className="px-6 py-2 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
-                >
-                  <Eye size={18} />
-                  Preview
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleSubmit("PUBLISH")}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+                  onClick={() => setShowConfirmModal(true)}
+                  disabled={isSubmitting}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
                   Publish Gig
                   <Check size={18} />
                 </button>
               </div>
             </div>
-          </div>
-        )
-        case 4:
-          return (
-            <div className="space-y-8">
-              {/* [Existing FAQs section unchanged] */}
-              {submissionError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 flex items-center gap-2">
-                  <AlertCircle size={18} />
-                  <p>{submissionError}</p>
-                </div>
-              )}
-              <div className="flex flex-wrap md:flex-nowrap justify-between gap-4 pt-8">
-                <div className="flex gap-3 w-full md:w-auto">
-                  <Link to="/gigs-dashboard" className="px-4 py-2 text-gray-500 hover:text-gray-700 font-medium">
-                    Cancel
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleSubmit("DRAFT")}
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center gap-2"
-                  >
-                    <Save size={18} />
-                    Save as Draft
-                  </button>
-                </div>
-                <div className="flex gap-3 w-full md:w-auto">
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="button"
-                    className="px-6 py-2 border border-purple-500 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors flex items-center gap-2"
-                  >
-                    <Eye size={18} />
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleSubmit("PUBLISH")}
-                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-                  >
-                    Publish Gig
-                    <Check size={18} />
-                  </button>
+
+            {/* Confirmation Modal */}
+            {showConfirmModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Are you sure?</h3>
+                  <p className="text-gray-600 mb-6">Do you want to publish this gig? It will be visible to clients.</p>
+                  <div className="flex justify-end gap-3">
+                    <button
+                      onClick={() => setShowConfirmModal(false)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleSubmit("ACTIVE")}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center gap-2 disabled:opacity-50"
+                    >
+                      {isSubmitting ? "Publishing..." : "Yes, Publish"}
+                      {!isSubmitting && <Check size={18} />}
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          );
+            )}
+
+            {/* Result Modal */}
+            {showResultModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+                  {resultStatus === "success" ? (
+                    <>
+                      <div className="flex justify-center mb-4">
+                        <div className="bg-green-100 p-3 rounded-full">
+                          <Check size={32} className="text-green-600" />
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Gig Published!</h3>
+                      <p className="text-gray-600 mb-6 text-center">
+                        Your gig has been successfully published and is now live.
+                      </p>
+                      <div className="flex justify-center">
+                        <button
+                          onClick={() => navigate("/gigs-dashboard?success=true")}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                        >
+                          Go to Dashboard
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex justify-center mb-4">
+                        <div className="bg-red-100 p-3 rounded-full">
+                          <AlertCircle size={32} className="text-red-600" />
+                        </div>
+                      </div>
+                      <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Publication Failed</h3>
+                      <p className="text-gray-600 mb-6 text-center">{submissionError}</p>
+                      <div className="flex justify-center gap-3">
+                        <button
+                          onClick={() => setShowResultModal(false)}
+                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                          Close
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowResultModal(false);
+                            setShowConfirmModal(true);
+                          }}
+                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                        >
+                          Try Again
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -1404,7 +1166,6 @@ export default function CreateGigForm() {
         <p className="text-gray-600">Showcase your video editing expertise and attract clients.</p>
       </div>
 
-      {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           {[1, 2, 3, 4].map((step) => (
@@ -1414,8 +1175,8 @@ export default function CreateGigForm() {
                   currentStep === step
                     ? "border-purple-600 bg-purple-600 text-white"
                     : currentStep > step
-                      ? "border-purple-600 bg-white text-purple-600"
-                      : "border-gray-300 bg-white text-gray-400"
+                    ? "border-purple-600 bg-white text-purple-600"
+                    : "border-gray-300 bg-white text-gray-400"
                 }`}
               >
                 {currentStep > step ? <Check size={18} /> : step}
@@ -1433,7 +1194,6 @@ export default function CreateGigForm() {
             </div>
           ))}
         </div>
-
         <div className="relative mt-2">
           <div className="absolute top-0 left-0 h-1 bg-gray-200 w-full rounded-full" />
           <div
@@ -1443,9 +1203,7 @@ export default function CreateGigForm() {
         </div>
       </div>
 
-    {/* Form Container */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">{renderFormStep()}</div>
     </div>
-  )
+  );
 }
-
