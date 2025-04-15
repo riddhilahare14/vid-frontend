@@ -23,13 +23,9 @@ export default function Dashboard() {
           {activeTab === 'projects' && <ProjectTracker />}
           {activeTab === 'shortlist' && <Shortlist />}
           {activeTab === 'payments' && <PaymentHistory />}
-          <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2">
-            <AIRecommendations />
-            <ProgressAnalytics />
-          </div>
+
         </main>
       </div>
     </div>
   )
 }
-

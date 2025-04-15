@@ -6,6 +6,7 @@ import Footer from './Components/Footer';
 import ProtectedRoute from './Components/protectedRoutes';
 import ProfileCompletionModal from './Components/ProfileCompletionModal';
 import axiosInstance from './utils/axios';
+import ClientJobs from './Components/JobPage/ClientJobs';
 
 const Homepage = lazy(() => import('./Components/Homepage'));
 const Homepage2 = lazy(() => import('./Components/Homepage2'));
@@ -55,6 +56,7 @@ const Settings = lazy(() => import('./Components/Settings/settings'));
 const JobDescriptionPage = lazy(() => import('./Components/JobDescription/Page'));
 const GigMainPage = lazy(() => import('./Components/GigSection/Page'));
 const PreviewGig = lazy(() => import('./Components/GigsDashboard/PreviewGig'));
+const VideoEditingGig = lazy(() => import('./Components/GigSection/GigDescriptionPage')) 
 
 function NavbarPage() {
   const user = useSelector((state) => state.user.user);
@@ -155,8 +157,11 @@ function NavbarPage() {
             <Route path="/create-gig" element={<CreateGigForm />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/job/:jobId" element={<JobDescriptionPage />} />
-            <Route path="/gigpage" element={<GigMainPage />} />
+            <Route path="/gig" element={<GigMainPage />} />
             <Route path="/gig/preview" element={<PreviewGig />} />
+            <Route path="/gig/:gigId" element={<VideoEditingGig />} />
+            <Route path='/jobs' element={<ClientJobs/>}></Route>
+            
 
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           </Routes>
