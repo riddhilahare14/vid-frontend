@@ -1,13 +1,13 @@
-"use client";
-
 import { useState, useEffect, useRef } from "react";
-import { Star, Clock, ChevronDown, Heart, Search, ChevronRight, ChevronLeft, Filter, X } from "lucide-react";
+import { Star, Clock, ChevronDown, Heart, ChevronRight, ChevronLeft, Filter, Check, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom"; // Add this import
+import { useSearchParams, useNavigate } from "react-router-dom"; // Added useNavigate
+import { toast } from "react-toastify";
 import axiosInstance from "../../utils/axios";
 
 // Service categories with modern icons
 const serviceCategories = [
+  { id: "all", name: "All Services", icon: "all" },
   { id: "ads", name: "Advertising", icon: "ads" },
   { id: "youtube", name: "YouTube", icon: "youtube" },
   { id: "corporate", name: "Corporate", icon: "corporate" },
@@ -17,12 +17,13 @@ const serviceCategories = [
 ];
 
 export default function PremiumMarketplace() {
-  const navigate = useNavigate(); // Initialize navigate
+  const [activeTab, setActiveTab] = useState("gigs");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedVideoType, setSelectedVideoType] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [gigs, setGigs] = useState([]);
+  const [editors, setEditors] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilters, setActiveFilters] = useState({
@@ -31,14 +32,32 @@ export default function PremiumMarketplace() {
     budget: false,
     deliveryTime: false,
   });
+  const [appliedFilters, setAppliedFilters] = useState({
+    serviceOptions: [],
+    sellerDetails: [],
+    budget: { min: null, max: null },
+    deliveryTime: null,
+  });
   const [sortBy, setSortBy] = useState("Best selling");
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sectionRef = useRef(null);
   const categoryRef = useRef(null);
   const [scrollPosition, setScrollPosition] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRefs = useRef({});
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate(); // Initialize useNavigate
+
+  // Handle category from query params
+  useEffect(() => {
+    const category = searchParams.get("category")?.toLowerCase();
+    if (category) {
+      const normalizedCategory = category === "all" ? "all" : category.replace(/\s+/g, "_");
+      setSelectedVideoType(normalizedCategory);
+      setSelectedCategory(normalizedCategory);
+      setSortBy(normalizedCategory === "all" ? "Best selling" : sortBy);
+    }
+  }, [searchParams]);
 
   // Handle responsive design
   useEffect(() => {
@@ -111,12 +130,16 @@ export default function PremiumMarketplace() {
     return () => container.removeEventListener("scroll", handleScrollUpdate);
   }, [categoryRef.current]);
 
-  // Fetch gigs from backend using axiosInstance
+  // Fetch gigs and editors from backend
   useEffect(() => {
+    const category = searchParams.get("category") || "all";
+    setSelectedVideoType(category);
+
     const fetchData = async () => {
       try {
         setLoading(true);
 
+        // Fetch gigs (unchanged)
         const gigResponse = await axiosInstance.get("/gig/all");
         const fetchedGigs = gigResponse.data.data.gigs;
 
@@ -139,34 +162,213 @@ export default function PremiumMarketplace() {
         }));
         setGigs(formattedGigs);
 
-        const uniqueCategories = ["all", ...new Set(formattedGigs.map((gig) => gig.category))];
+        // Build query params for freelancers
+        const queryParams = new URLSearchParams();
+        if (category && category !== "all") {
+          queryParams.append("skills", category);
+        }
+        queryParams.append("page", "1");
+        queryParams.append("limit", "10");
+
+        // Fetch editors
+        const editorsResponse = await axiosInstance.get(`/users/freelancers?${queryParams.toString()}`);
+        console.log("Editors response:", editorsResponse.data);
+        const fetchedEditors = editorsResponse.data.data.freelancers.map((editor) => ({
+          id: editor.id,
+          name: editor.name || "Unnamed Freelancer",
+          specialty: editor.jobTitle || editor.skills[0] || "Video Editing",
+          rating: editor.rating || (editor.hourlyRate ? Math.min(editor.hourlyRate / 20, 5) : 4.5),
+          reviews: editor.gigs?.length || 0,
+          hourlyRate: editor.hourlyRate || 50,
+          image: editor.profilePicture || "/placeholder.svg?height=400&width=400",
+          level: editor.experienceLevel
+            ? {
+                ENTRY: "Level 1",
+                INTERMEDIATE: "Level 2",
+                EXPERT: "Level 3",
+              }[editor.experienceLevel]
+            : "Level 1",
+          availability: editor.availabilityStatus
+            ? {
+                FULL_TIME: "Available Now",
+                PART_TIME: "Part-Time",
+                UNAVAILABLE: "Currently Unavailable",
+              }[editor.availabilityStatus]
+            : "Available Now",
+          isFavorite: false,
+          category: editor.skills[0]?.toLowerCase().replace(/\s+/g, "_") || "all",
+        }));
+
+        console.log("Fetched editors:", fetchedEditors);
+        setEditors(fetchedEditors);
+        toast.success("Freelancers loaded successfully!");
+
+        // Set categories
+        const uniqueCategories = [
+          "all",
+          ...new Set([...fetchedGigs.map((gig) => gig.category), ...fetchedEditors.map((editor) => editor.category)]),
+        ];
         const categoryList = uniqueCategories.map((cat) => ({
           id: cat,
-          name: cat === "all" ? "All Services" : cat.charAt(0).toUpperCase() + cat.slice(1),
+          name: cat === "all" ? "All Services" : cat.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" "),
         }));
         setCategories(categoryList);
+
+        toast.success("Data loaded successfully!");
       } catch (error) {
-        console.error("Error fetching gig data:", error.response?.data || error.message);
-        // Handle mock data if needed
+        console.error("Error fetching data:", error);
+        toast.error(error.response?.data?.message || "Failed to load gigs and editors. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [searchParams]);
 
-  // Filter gigs based on selected category, video type, and search query
+  // Handle filter changes
+  const handleFilterChange = (filterType, value) => {
+    if (filterType === "serviceOptions" || filterType === "sellerDetails") {
+      setAppliedFilters((prev) => {
+        const currentValues = [...prev[filterType]];
+        const index = currentValues.indexOf(value);
+
+        if (index === -1) {
+          currentValues.push(value);
+        } else {
+          currentValues.splice(index, 1);
+        }
+
+        return { ...prev, [filterType]: currentValues };
+      });
+    } else if (filterType === "budget") {
+      setAppliedFilters((prev) => ({
+        ...prev,
+        budget: { ...prev.budget, ...value },
+      }));
+    } else if (filterType === "deliveryTime") {
+      setAppliedFilters((prev) => ({
+        ...prev,
+        deliveryTime: prev.deliveryTime === value ? null : value,
+      }));
+    }
+  };
+
+  // Apply filters
+  const applyFilters = () => {
+    setActiveFilters({
+      serviceOptions: false,
+      sellerDetails: false,
+      budget: false,
+      deliveryTime: false,
+    });
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setAppliedFilters({
+      serviceOptions: [],
+      sellerDetails: [],
+      budget: { min: null, max: null },
+      deliveryTime: null,
+    });
+  };
+
+  // Filter gigs/editors based on selected category, video type, and applied filters
   const filteredGigs = gigs.filter((gig) => {
-    if (selectedVideoType && gig.category !== selectedVideoType) return false;
+    if (selectedVideoType && selectedVideoType !== "all" && gig.category !== selectedVideoType) return false;
     if (selectedCategory !== "all" && gig.category !== selectedCategory) return false;
-    if (searchQuery && !gig.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+
+    if (appliedFilters.serviceOptions.length > 0 && !appliedFilters.serviceOptions.includes(gig.serviceType)) return false;
+
+    if (appliedFilters.sellerDetails.length > 0) {
+      const sellerLevel = gig.sellerBadge.toLowerCase().replace(/\s+/g, "");
+      if (!appliedFilters.sellerDetails.includes(sellerLevel)) return false;
+    }
+
+    if (appliedFilters.budget.min && gig.price < appliedFilters.budget.min) return false;
+    if (appliedFilters.budget.max && gig.price > appliedFilters.budget.max) return false;
+
+    if (appliedFilters.deliveryTime) {
+      const deliveryDays = Number.parseInt(gig.deliveryTime.split(" ")[0]);
+      if (appliedFilters.deliveryTime === "express" && deliveryDays > 1) return false;
+      if (appliedFilters.deliveryTime === "3days" && deliveryDays > 3) return false;
+      if (appliedFilters.deliveryTime === "7days" && deliveryDays > 7) return false;
+    }
+
     return true;
   });
 
-  // Toggle favorite status for a gig
-  const toggleFavorite = (id) => {
-    setGigs(gigs.map((gig) => (gig.id === id ? { ...gig, isFavorite: !gig.isFavorite } : gig)));
+  const filteredEditors = editors.filter((editor) => {
+    if (selectedVideoType && selectedVideoType !== "all" && editor.category !== selectedVideoType) return false;
+    if (selectedCategory !== "all" && editor.category !== selectedCategory) return false;
+
+    if (appliedFilters.serviceOptions.length > 0 && !appliedFilters.serviceOptions.includes(editor.specialty)) return false;
+
+    if (appliedFilters.sellerDetails.length > 0) {
+      const editorLevel = editor.level.toLowerCase().replace(/\s+/g, "");
+      if (!appliedFilters.sellerDetails.includes(editorLevel)) return false;
+    }
+
+    if (appliedFilters.budget.min && editor.hourlyRate < appliedFilters.budget.min) return false;
+    if (appliedFilters.budget.max && editor.hourlyRate > appliedFilters.budget.max) return false;
+
+    return true;
+  });
+
+  // Sort gigs/editors based on selected sort option
+  const sortedGigs = [...filteredGigs].sort((a, b) => {
+    switch (sortBy) {
+      case "Best selling":
+        return b.reviews - a.reviews;
+      case "Newest":
+        return new Date(b.date || Date.now()) - new Date(a.date || Date.now());
+      case "Best rating":
+        return b.rating - a.rating;
+      case "Price: Low to High":
+        return a.price - b.price;
+      case "Price: High to Low":
+        return b.price - a.price;
+      default:
+        return 0;
+    }
+  });
+
+  const sortedEditors = [...filteredEditors].sort((a, b) => {
+    switch (sortBy) {
+      case "Best selling":
+        return b.reviews - a.reviews;
+      case "Newest":
+        return new Date(b.createdAt || Date.now()) - new Date(a.createdAt || Date.now());
+      case "Best rating":
+        return b.rating - a.rating;
+      case "Price: Low to High":
+        return a.hourlyRate - b.hourlyRate;
+      case "Price: High to Low":
+        return b.hourlyRate - a.hourlyRate;
+      default:
+        return 0;
+    }
+  });
+
+  // Toggle favorite status
+  const toggleFavorite = async (id, type) => {
+    try {
+      if (type === "gig") {
+        const gig = gigs.find((g) => g.id === id);
+        await axiosInstance.post(`/gigs/${id}/favorite`, { isFavorite: !gig.isFavorite });
+        setGigs(gigs.map((gig) => (gig.id === id ? { ...gig, isFavorite: !gig.isFavorite } : gig)));
+        toast.success(`Gig ${gig.isFavorite ? "removed from" : "added to"} favorites`);
+      } else {
+        const editor = editors.find((e) => e.id === id);
+        await axiosInstance.post(`/editors/${id}/favorite`, { isFavorite: !editor.isFavorite });
+        setEditors(editors.map((editor) => (editor.id === id ? { ...editor, isFavorite: !editor.isFavorite } : editor)));
+        toast.success(`Editor ${editor.isFavorite ? "removed from" : "added to"} favorites`);
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+      toast.error("Failed to update favorite status");
+    }
   };
 
   // Toggle filter dropdown
@@ -197,51 +399,231 @@ export default function PremiumMarketplace() {
   };
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white">
-      {/* Main Search Bar */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
-        <div className="relative max-w-3xl mx-auto">
-          <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-            <Search className="w-5 h-5 text-slate-500" />
-          </div>
-          <input
-            type="search"
-            className="block w-full p-4 pl-12 text-base text-slate-900 border-0 rounded-xl bg-white shadow-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-all duration-200"
-            placeholder="Search for video editing services..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              onClick={() => setSearchQuery("")}
+    <section ref={sectionRef} className="relative overflow-hidden bg-gradient-to-b from-violet-50 to-white">
+      {/* Tab Selector */}
+      <div className="border-b border-slate-200 bg-white sticky top-0 z-20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex">
+            <motion.button
+              className={`relative py-4 px-6 text-base font-medium transition-colors ${
+                activeTab === "gigs" ? "text-violet-600" : "text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("gigs")}
             >
-              <X className="w-5 h-5" />
-            </button>
-          )}
+              Explore Gigs
+              {activeTab === "gigs" && (
+                <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                  layoutId="activeTab"
+                  initial={false}
+                />
+              )}
+            </motion.button>
+            <motion.button
+              className={`relative py-4 px-6 text-base font-medium transition-colors ${
+                activeTab === "editors" ? "text-violet-600" : "text-slate-600 hover:text-slate-900"
+              }`}
+              onClick={() => setActiveTab("editors")}
+            >
+              Explore Editors
+              {activeTab === "editors" && (
+                <motion.div
+                  className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-violet-500 to-fuchsia-500"
+                  layoutId="activeTab"
+                  initial={false}
+                />
+              )}
+            </motion.button>
+          </div>
         </div>
       </div>
 
       {/* Category Selection */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between mb-4">
-            <motion.h2
-              className="text-xl font-semibold text-slate-800"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+      <div className="bg-white py-6 border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="flex items-center justify-between mb-5"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-xl font-semibold text-slate-800 flex items-center">
+              <Sparkles className="w-5 h-5 mr-2 text-violet-500" />
+              Categories
+            </h2>
+            <div className="text-sm text-violet-600 font-medium">
+              {selectedVideoType
+                ? `Viewing: ${
+                    selectedVideoType === "all"
+                      ? "All Services"
+                      : selectedVideoType.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")
+                  }`
+                : "All Categories"}
+            </div>
+          </motion.div>
+
+          <div className="relative">
+            {scrollPosition > 10 && (
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 border border-slate-200"
+                onClick={() => handleScroll("left")}
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-600" />
+              </motion.button>
+            )}
+
+            <div
+              ref={categoryRef}
+              className="flex overflow-x-auto gap-4 pb-2 scrollbar-hide relative"
+              onScroll={() => setScrollPosition(categoryRef.current?.scrollLeft || 0)}
             >
-              Explore Categories
-            </motion.h2>
+              {serviceCategories.map((type) => (
+                <button
+                  key={type.id}
+                  onClick={() => {
+                    setSelectedVideoType(type.id === selectedVideoType ? null : type.id);
+                    setSortBy(type.id === "all" ? "Best selling" : sortBy);
+                  }}
+                  className={`flex flex-col items-center justify-center min-w-[120px] py-4 px-3 rounded-xl ${
+                    selectedVideoType === type.id
+                      ? "bg-gradient-to-br from-violet-50 to-fuchsia-50 text-violet-700 border-2 border-violet-200"
+                      : "bg-white border border-slate-200 text-slate-700 hover:border-violet-200 hover:bg-slate-50"
+                  } transition-all duration-200`}
+                >
+                  <div
+                    className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${
+                      selectedVideoType === type.id
+                        ? "bg-gradient-to-br from-violet-100 to-fuchsia-100"
+                        : "bg-slate-100"
+                    }`}
+                  >
+                    <CategoryIcon type={type.icon} isSelected={selectedVideoType === type.id} />
+                  </div>
+                  <span className="font-medium text-sm">{type.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {scrollPosition < maxScroll - 10 && (
+              <motion.button
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 border border-slate-200"
+                onClick={() => handleScroll("right")}
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="w-5 h-5 text-slate-600" />
+              </motion.button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Filters and Sort Section */}
+      <motion.div
+        className="bg-white sticky top-[57px] z-10 border-b border-slate-200 shadow-sm"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.1 }}
+      >
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center text-slate-500 mr-1">
+                <Filter className="w-4 h-4 mr-1" />
+                <span className="text-sm font-medium">Filters:</span>
+              </div>
+
+              <FilterDropdown
+                label="Service options"
+                isOpen={activeFilters.serviceOptions}
+                onToggle={() => toggleFilter("serviceOptions")}
+                options={[
+                  { id: "video_editing", label: "Video Editing" },
+                  { id: "animation", label: "Animation" },
+                  { id: "motion_graphics", label: "Motion Graphics" },
+                  { id: "color_grading", label: "Color Grading" },
+                ]}
+                selectedValues={appliedFilters.serviceOptions}
+                onChange={(value) => handleFilterChange("serviceOptions", value)}
+                onApply={applyFilters}
+                onClear={() => setAppliedFilters((prev) => ({ ...prev, serviceOptions: [] }))}
+                dropdownRef={(el) => (dropdownRefs.current.serviceOptions = el)}
+              />
+
+              <FilterDropdown
+                label="Seller details"
+                isOpen={activeFilters.sellerDetails}
+                onToggle={() => toggleFilter("sellerDetails")}
+                options={[
+                  { id: "top_rated", label: "Top Rated" },
+                  { id: "level_2", label: "Level 2" },
+                  { id: "level_1", label: "Level 1" },
+                  { id: "new_seller", label: "New Seller" },
+                ]}
+                selectedValues={appliedFilters.sellerDetails}
+                onChange={(value) => handleFilterChange("sellerDetails", value)}
+                onApply={applyFilters}
+                onClear={() => setAppliedFilters((prev) => ({ ...prev, sellerDetails: [] }))}
+                dropdownRef={(el) => (dropdownRefs.current.sellerDetails = el)}
+              />
+
+              <FilterDropdown
+                label="Budget"
+                isOpen={activeFilters.budget}
+                onToggle={() => toggleFilter("budget")}
+                type="range"
+                budgetValues={appliedFilters.budget}
+                onChange={(value) => handleFilterChange("budget", value)}
+                onApply={applyFilters}
+                onClear={() => setAppliedFilters((prev) => ({ ...prev, budget: { min: null, max: null } }))}
+                dropdownRef={(el) => (dropdownRefs.current.budget = el)}
+              />
+
+              <FilterDropdown
+                label="Delivery time"
+                isOpen={activeFilters.deliveryTime}
+                onToggle={() => toggleFilter("deliveryTime")}
+                options={[
+                  { id: "express", label: "Express 24H" },
+                  { id: "3days", label: "Up to 3 days" },
+                  { id: "7days", label: "Up to 7 days" },
+                  { id: "anytime", label: "Anytime" },
+                ]}
+                selectedValues={appliedFilters.deliveryTime ? [appliedFilters.deliveryTime] : []}
+                type="radio"
+                onChange={(value) => handleFilterChange("deliveryTime", value)}
+                onApply={applyFilters}
+                onClear={() => setAppliedFilters((prev) => ({ ...prev, deliveryTime: null }))}
+                dropdownRef={(el) => (dropdownRefs.current.deliveryTime = el)}
+              />
+
+              {(appliedFilters.serviceOptions.length > 0 ||
+                appliedFilters.sellerDetails.length > 0 ||
+                appliedFilters.budget.min ||
+                appliedFilters.budget.max ||
+                appliedFilters.deliveryTime) && (
+                <button
+                  onClick={clearFilters}
+                  className="px-3 py-1.5 text-xs bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1"
+                >
+                  <span>Clear All</span>
+                </button>
+              )}
+            </div>
 
             {/* Sort Dropdown */}
             <div className="relative" data-dropdown="sort">
               <button
-                className="flex items-center gap-2 text-slate-700 font-medium bg-white border border-slate-200 rounded-lg px-3 py-1.5 hover:border-emerald-300 transition-colors"
+                className="flex items-center gap-2 text-slate-700 font-medium bg-white border border-slate-200 rounded-lg px-4 py-2 hover:border-violet-300 transition-colors"
                 onClick={() => setIsSortOpen(!isSortOpen)}
               >
-                <span className="text-sm">Sort:</span> <span className="font-semibold text-sm">{sortBy}</span>
+                <span className="text-sm">Sort by:</span> <span className="font-semibold text-sm">{sortBy}</span>
                 <ChevronDown
                   className={`w-4 h-4 transition-transform duration-200 ${isSortOpen ? "rotate-180" : ""}`}
                 />
@@ -260,14 +642,20 @@ export default function PremiumMarketplace() {
                       (option) => (
                         <motion.button
                           key={option}
-                          className={`block w-full text-left px-4 py-2 text-sm ${sortBy === option ? "bg-emerald-50 text-emerald-700" : "text-slate-700 hover:bg-slate-50"}`}
+                          className={`block w-full text-left px-4 py-2.5 text-sm ${
+                            sortBy === option
+                              ? "bg-gradient-to-r from-violet-50 to-fuchsia-50 text-violet-700"
+                              : "text-slate-700 hover:bg-slate-50"
+                          }`}
                           onClick={() => {
                             setSortBy(option);
                             setIsSortOpen(false);
                           }}
-                          whileHover={{ backgroundColor: sortBy === option ? "#ecfdf5" : "#f8fafc" }}
                         >
-                          {option}
+                          <div className="flex items-center">
+                            {sortBy === option && <Check className="w-4 h-4 mr-2 text-violet-600" />}
+                            <span className={sortBy === option ? "ml-0" : "ml-6"}>{option}</span>
+                          </div>
                         </motion.button>
                       ),
                     )}
@@ -276,127 +664,11 @@ export default function PremiumMarketplace() {
               </AnimatePresence>
             </div>
           </div>
-
-          <div className="relative">
-            {scrollPosition > 10 && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-1.5 border border-slate-200"
-                onClick={() => handleScroll("left")}
-                aria-label="Scroll left"
-              >
-                <ChevronLeft className="w-4 h-4 text-slate-600" />
-              </motion.button>
-            )}
-
-            <div
-              ref={categoryRef}
-              className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide relative"
-              onScroll={() => setScrollPosition(categoryRef.current?.scrollLeft || 0)}
-            >
-              {serviceCategories.map((type) => (
-                <motion.button
-                  key={type.id}
-                  onClick={() => setSelectedVideoType(type.id === selectedVideoType ? null : type.id)}
-                  className={`flex items-center justify-center min-w-[140px] py-2.5 px-4 rounded-lg ${
-                    selectedVideoType === type.id
-                      ? "bg-emerald-100 text-emerald-700 border-0"
-                      : "bg-white border border-slate-200 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/30"
-                  } transition-all duration-200`}
-                  whileHover={{ y: -2, boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)" }}
-                  whileTap={{ y: 0 }}
-                >
-                  <CategoryIcon type={type.icon} isSelected={selectedVideoType === type.id} />
-                  <span className="font-medium text-sm ml-2">{type.name}</span>
-                </motion.button>
-              ))}
-            </div>
-
-            {scrollPosition < maxScroll - 10 && (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-1.5 border border-slate-200"
-                onClick={() => handleScroll("right")}
-                aria-label="Scroll right"
-              >
-                <ChevronRight className="w-4 h-4 text-slate-600" />
-              </motion.button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Filters Section */}
-      <motion.div
-        className="border-b border-slate-200 bg-white sticky top-0 z-10"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.1 }}
-      >
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center text-slate-500 mr-2">
-              <Filter className="w-4 h-4 mr-1" />
-              <span className="text-sm font-medium">Filters:</span>
-            </div>
-
-            <FilterDropdown
-              label="Service options"
-              isOpen={activeFilters.serviceOptions}
-              onToggle={() => toggleFilter("serviceOptions")}
-              options={[
-                { id: "editing", label: "Video editing" },
-                { id: "animation", label: "Animation" },
-                { id: "motion", label: "Motion graphics" },
-                { id: "color", label: "Color grading" },
-              ]}
-              dropdownRef={(el) => (dropdownRefs.current.serviceOptions = el)}
-            />
-
-            <FilterDropdown
-              label="Seller details"
-              isOpen={activeFilters.sellerDetails}
-              onToggle={() => toggleFilter("sellerDetails")}
-              options={[
-                { id: "top", label: "Top Rated" },
-                { id: "level2", label: "Level 2" },
-                { id: "level1", label: "Level 1" },
-                { id: "new", label: "New Seller" },
-              ]}
-              dropdownRef={(el) => (dropdownRefs.current.sellerDetails = el)}
-            />
-
-            <FilterDropdown
-              label="Budget"
-              isOpen={activeFilters.budget}
-              onToggle={() => toggleFilter("budget")}
-              type="range"
-              dropdownRef={(el) => (dropdownRefs.current.budget = el)}
-            />
-
-            <FilterDropdown
-              label="Delivery time"
-              isOpen={activeFilters.deliveryTime}
-              onToggle={() => toggleFilter("deliveryTime")}
-              options={[
-                { id: "express", label: "Express 24H" },
-                { id: "3days", label: "Up to 3 days" },
-                { id: "7days", label: "Up to 7 days" },
-                { id: "anytime", label: "Anytime" },
-              ]}
-              type="radio"
-              dropdownRef={(el) => (dropdownRefs.current.deliveryTime = el)}
-            />
-          </div>
         </div>
       </motion.div>
 
       {/* Results Section */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <motion.div
           className="flex flex-wrap items-center justify-between mb-6"
           initial={{ opacity: 0 }}
@@ -404,49 +676,44 @@ export default function PremiumMarketplace() {
           transition={{ duration: 0.5, delay: 0.2 }}
         >
           <div className="text-slate-600">
-            <span className="font-semibold">{filteredGigs.length}</span> services found
+            <span className="font-semibold">{activeTab === "gigs" ? sortedGigs.length : sortedEditors.length}</span>{" "}
+            {activeTab === "gigs" ? "services" : "editors"} found
           </div>
         </motion.div>
 
         {loading ? (
           <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-emerald-500"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-violet-500"></div>
           </div>
-        ) : filteredGigs.length === 0 ? (
+        ) : activeTab === "gigs" && sortedGigs.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-xl shadow-sm">
-            <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-              <Search className="w-8 h-8 text-slate-400" />
+            <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-violet-100 mb-4">
+              <Filter className="w-8 h-8 text-violet-400" />
             </div>
             <p className="text-xl text-slate-600 mb-4">No services found matching your criteria.</p>
             <button
-              onClick={() => {
-                setSelectedCategory("all");
-                setSelectedVideoType(null);
-                setSearchQuery("");
-              }}
-              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              onClick={clearFilters}
+              className="px-6 py-2 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg hover:from-violet-700 hover:to-fuchsia-700 transition-colors"
             >
               Clear filters
             </button>
           </div>
-        ) : (
+        ) : activeTab === "gigs" ? (
           <motion.div
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            {filteredGigs.map((gig) => (
+            {sortedGigs.map((gig) => (
               <motion.div
                 key={gig.id}
                 variants={itemVariants}
                 className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
                 whileHover={{
-                  y: -3,
                   boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
                   transition: { duration: 0.2 },
                 }}
-                onClick={() => navigate(`/gig/${gig.id}`)} // Navigate to gig page
               >
                 <div className="relative aspect-[16/9] overflow-hidden">
                   <img
@@ -455,9 +722,9 @@ export default function PremiumMarketplace() {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
 
-                  <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <motion.div
-                      className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center"
+                      className="w-12 h-12 rounded-full bg-black/60 flex items-center justify-center"
                       whileHover={{
                         scale: 1.1,
                         backgroundColor: "rgba(0, 0, 0, 0.75)",
@@ -470,8 +737,8 @@ export default function PremiumMarketplace() {
                   <motion.button
                     onClick={(e) => {
                       e.preventDefault();
-                      e.stopPropagation(); // Prevent card click
-                      toggleFavorite(gig.id);
+                      e.stopPropagation();
+                      toggleFavorite(gig.id, "gig");
                     }}
                     className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:bg-white transition-all duration-200"
                     aria-label={gig.isFavorite ? "Remove from favorites" : "Add to favorites"}
@@ -489,18 +756,18 @@ export default function PremiumMarketplace() {
 
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-600 overflow-hidden flex items-center justify-center text-white text-xs font-bold">
                       {gig.seller.charAt(0)}
                     </div>
                     <span className="text-xs font-medium text-slate-700">{gig.seller}</span>
                     {gig.sellerBadge && (
-                      <span className="text-xs px-1.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-sm">
+                      <span className="text-xs px-1.5 py-0.5 bg-violet-100 text-violet-800 rounded-sm">
                         {gig.sellerBadge}
                       </span>
                     )}
                   </div>
 
-                  <h3 className="text-sm font-medium text-slate-800 mb-2 line-clamp-2 min-h-[40px] group-hover:text-emerald-700 transition-colors">
+                  <h3 className="text-sm font-medium text-slate-800 mb-2 line-clamp-2 min-h-[40px] group-hover:text-violet-700 transition-colors">
                     {gig.title}
                   </h3>
 
@@ -519,6 +786,93 @@ export default function PremiumMarketplace() {
                     <div className="text-right">
                       <div className="text-xs text-slate-500">From</div>
                       <div className="font-bold text-slate-900">₹{gig.price.toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {sortedEditors.map((editor) => (
+              <motion.div
+                key={editor.id}
+                variants={itemVariants}
+                className="group bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer"
+                whileHover={{
+                  boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
+                  transition: { duration: 0.2 },
+                }}
+                onClick={() => navigate(`/freelancers/${editor.id}`)} // Navigate to freelancer profile
+              >
+                <div className="relative p-6">
+                  <motion.button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleFavorite(editor.id, "editor");
+                    }}
+                    className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-sm hover:bg-slate-50 transition-all duration-200 border border-slate-200"
+                    aria-label={editor.isFavorite ? "Remove from favorites" : "Add to favorites"}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <Heart
+                      className={`w-4 h-4 ${editor.isFavorite ? "fill-rose-500 text-rose-500" : "text-slate-600"}`}
+                    />
+                  </motion.button>
+
+                  <div className="flex items-start gap-4">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-violet-100">
+                      <img
+                        src={editor.image || "/placeholder.svg"}
+                        alt={editor.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-slate-800 group-hover:text-violet-700 transition-colors">
+                        {editor.name}
+                      </h3>
+                      <p className="text-sm text-slate-600 mb-1">{editor.specialty}</p>
+
+                      <div className="flex items-center gap-1 mb-2">
+                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                        <span className="font-medium text-xs text-slate-800">{editor.rating.toFixed(1)}</span>
+                        <span className="text-xs text-slate-500">({editor.reviews})</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 bg-violet-100 text-violet-800 rounded text-xs font-medium">
+                          {editor.level}
+                        </span>
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-medium">
+                          {editor.availability}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <button 
+                      className="px-3 py-1.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-sm rounded-lg hover:from-violet-700 hover:to-fuchsia-700 transition-colors"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Add contact functionality if needed
+                      }}
+                    >
+                      Contact
+                    </button>
+                    <div className="text-right">
+                      <div className="text-xs text-slate-500">Hourly Rate</div>
+                      <div className="font-bold text-slate-900">₹{editor.hourlyRate}/hr</div>
                     </div>
                   </div>
                 </div>
@@ -550,16 +904,34 @@ export default function PremiumMarketplace() {
           from { transform: translateY(10px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+        .animate-pulse {
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
       `}</style>
     </section>
   );
 }
 
-// CategoryIcon and FilterDropdown components remain unchanged
+// CategoryIcon component
 function CategoryIcon({ type, isSelected }) {
-  const iconColor = isSelected ? "#059669" : "#475569";
+  const iconColor = isSelected ? "#7c3aed" : "#475569";
 
   const icons = {
+    all: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path
+          d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"
+          stroke={iconColor}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    ),
     ads: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -740,20 +1112,59 @@ function CategoryIcon({ type, isSelected }) {
   return icons[type] || null;
 }
 
-function FilterDropdown({ label, isOpen, onToggle, options = [], type = "checkbox", dropdownRef }) {
+// FilterDropdown component
+function FilterDropdown({
+  label,
+  isOpen,
+  onToggle,
+  options = [],
+  type = "checkbox",
+  selectedValues = [],
+  budgetValues = { min: null, max: null },
+  onChange,
+  onApply,
+  onClear,
+  dropdownRef,
+}) {
+  const [minBudget, setMinBudget] = useState(budgetValues.min || "");
+  const [maxBudget, setMaxBudget] = useState(budgetValues.max || "");
+
+  useEffect(() => {
+    setMinBudget(budgetValues.min || "");
+    setMaxBudget(budgetValues.max || "");
+  }, [budgetValues]);
+
+  const handleBudgetApply = () => {
+    onChange({ min: minBudget ? Number.parseInt(minBudget) : null, max: maxBudget ? Number.parseInt(maxBudget) : null });
+    onApply();
+  };
+
+  const handleBudgetClear = () => {
+    setMinBudget("");
+    setMaxBudget("");
+    onClear();
+  };
+
   return (
     <div className="relative" data-dropdown={label.toLowerCase().replace(/\s+/g, "-")} ref={dropdownRef}>
       <motion.button
         onClick={onToggle}
         className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm ${
           isOpen
-            ? "bg-emerald-100 text-emerald-700"
-            : "bg-white border border-slate-200 text-slate-700 hover:border-slate-300"
+            ? "bg-gradient-to-r from-violet-100 to-fuchsia-100 text-violet-700"
+            : "bg-white border border-slate-200 text-slate-700 hover:border-violet-300"
         } transition-all duration-200`}
-        whileHover={{ y: -1, boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)" }}
-        whileTap={{ y: 0 }}
       >
         <span>{label}</span>
+        {type === "checkbox" && selectedValues.length > 0 && (
+          <span className="flex items-center justify-center w-4 h-4 text-xs bg-violet-600 text-white rounded-full">
+            {selectedValues.length}
+          </span>
+        )}
+        {type === "radio" && selectedValues.length > 0 && <span className="w-2 h-2 bg-violet-600 rounded-full"></span>}
+        {type === "range" && (budgetValues.min || budgetValues.max) && (
+          <span className="w-2 h-2 bg-violet-600 rounded-full"></span>
+        )}
         <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
       </motion.button>
 
@@ -779,12 +1190,16 @@ function FilterDropdown({ label, isOpen, onToggle, options = [], type = "checkbo
                     <input
                       type="number"
                       placeholder="₹"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-md"
+                      className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-md focus:border-violet-400 focus:ring focus:ring-violet-100 focus:outline-none"
+                      value={minBudget}
+                      onChange={(e) => setMinBudget(e.target.value)}
                     />
                     <input
                       type="number"
                       placeholder="₹"
-                      className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-md"
+                      className="w-full px-3 py-1.5 text-sm border border-slate-300 rounded-md focus:border-violet-400 focus:ring focus:ring-violet-100 focus:outline-none"
+                      value={maxBudget}
+                      onChange={(e) => setMaxBudget(e.target.value)}
                     />
                   </div>
                 </div>
@@ -795,7 +1210,9 @@ function FilterDropdown({ label, isOpen, onToggle, options = [], type = "checkbo
                       <input
                         type={type}
                         name={type === "radio" ? label.toLowerCase().replace(/\s+/g, "-") : undefined}
-                        className={`${type === "checkbox" ? "rounded" : "rounded-full"} border-slate-300 text-emerald-600 focus:ring-emerald-500`}
+                        className={`${type === "checkbox" ? "rounded" : "rounded-full"} border-slate-300 text-violet-600 focus:ring-violet-500`}
+                        checked={selectedValues.includes(option.id)}
+                        onChange={() => onChange(option.id)}
                       />
                       <span className="text-sm text-slate-700">{option.label}</span>
                     </label>
@@ -808,13 +1225,15 @@ function FilterDropdown({ label, isOpen, onToggle, options = [], type = "checkbo
                   className="px-3 py-1 text-xs text-slate-600 hover:text-slate-800"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={type === "range" ? handleBudgetClear : onClear}
                 >
                   Clear
                 </motion.button>
                 <motion.button
-                  className="px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700"
-                  whileHover={{ scale: 1.05, backgroundColor: "#059669" }}
+                  className="px-3 py-1 text-xs bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white rounded hover:from-violet-700 hover:to-fuchsia-700"
+                  whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={type === "range" ? handleBudgetApply : onApply}
                 >
                   Apply
                 </motion.button>

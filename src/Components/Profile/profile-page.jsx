@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react";
 import {
   Camera,
   Check,
@@ -31,261 +31,267 @@ import {
   CheckCircle,
   AlertCircle,
   Image,
-} from "lucide-react"
-import "./animation.css"
-import axiosInstance from "../../utils/axios"
-
+} from "lucide-react";
+import { toast } from "react-toastify"; // Added for error notifications
+import "./animation.css";
+import axiosInstance from "../../utils/axios";
 
 // Helper function to replace the cn utility
 function cn(...classes) {
-  return classes.filter(Boolean).join(" ")
+  return classes.filter(Boolean).join(" ");
 }
 
 export default function ProfilePage({ userId }) {
-  const [activeTab, setActiveTab] = useState("portfolio")
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isDropdownOpen, setIsDropdownOpen] = useState(null)
-  const [profile, setProfile] = useState({})
-  const [portfolioItems, setPortfolioItems] = useState([])
-  const [about, setAbout] = useState({ text: "", services: [] })
-  const [equipment, setEquipment] = useState({ cameras: [], lenses: [], lighting: [] })
-  const [gigs, setGigs] = useState([])
-  const [badges, setBadges] = useState([])
-  const [isOwner, setIsOwner] = useState(false)
-  const [stats, setStats] = useState({ totalJobs: 0, totalHours: 0, successRate: 0, rating: 0 })
-  const [isAddingContent, setIsAddingContent] = useState(false)
-  const [contentType, setContentType] = useState("")
+  const [activeTab, setActiveTab] = useState("portfolio");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(null);
+  const [profile, setProfile] = useState({});
+  const [portfolioItems, setPortfolioItems] = useState([]);
+  const [about, setAbout] = useState({ text: "", services: [] });
+  const [equipment, setEquipment] = useState({ cameras: [], lenses: [], lighting: [] });
+  const [gigs, setGigs] = useState([]);
+  const [badges, setBadges] = useState([]);
+  const [isOwner, setIsOwner] = useState(false);
+  const [stats, setStats] = useState({ totalJobs: 0, totalHours: 0, successRate: 0, rating: 0 });
+  const [isAddingContent, setIsAddingContent] = useState(false);
+  const [contentType, setContentType] = useState("");
   const [newPortfolioItem, setNewPortfolioItem] = useState({
     title: "",
     category: "",
     description: "",
-    mediaType: "image", // image or video
+    mediaType: "image",
     mediaUrl: "",
-  })
+  });
   const [newService, setNewService] = useState({
     title: "",
     description: "",
     price: "",
-  })
+  });
   const [newEquipment, setNewEquipment] = useState({
     type: "cameras",
     name: "",
-  })
+  });
   const [newGig, setNewGig] = useState({
     title: "",
     description: "",
     price: "",
     deliveryTime: "",
-  })
-  const [isEditingAbout, setIsEditingAbout] = useState(false)
-  const [showNotification, setShowNotification] = useState(false)
-  const [notificationMessage, setNotificationMessage] = useState("")
-  const [notificationType, setNotificationType] = useState("success") // success or error
+  });
+  const [isEditingAbout, setIsEditingAbout] = useState(false);
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+  const [notificationType, setNotificationType] = useState("success");
 
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef(null);
 
   // Fetch profile data
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const endpoint = userId ? `/users/profile/${userId}` : "/users/me"
-        const { data } = await axiosInstance.get(endpoint)
-        const user = data.data
+        const endpoint = userId ? `/users/freelancers/${userId}` : "/users/me";
+        const { data } = await axiosInstance.get(endpoint);
+        const user = data.data;
+
         setProfile({
-          firstname: user.firstname,
-          lastname: user.lastname,
+          firstname: user.firstname || "",
+          lastname: user.lastname || "",
           profilePicture: user.profilePicture || "/placeholder.svg?height=160&width=160",
           isVerified: user.isVerified || false,
-          lastNameChange: user.lastNameChange,
+          lastNameChange: user.lastNameChange || null,
           hourlyRate: user.freelancerProfile?.hourlyRate || 85,
           country: user.country || "United States",
-          city: user.city || "New York",
-          bio: user.bio || "",
-        })
-        setPortfolioItems(user.freelancerProfile?.portfolio || [])
+          city: user.freelancerProfile?.city || "New York",
+          bio: user.freelancerProfile?.bio || "",
+        });
+
+        setPortfolioItems(user.freelancerProfile?.portfolio || []);
         setAbout({
           text: user.freelancerProfile?.overview || "",
-          services: user.freelancerProfile?.services || [],
-        })
+          services: user.freelancerProfile?.skills || [],
+        });
         setEquipment({
           cameras: user.freelancerProfile?.equipmentCameras?.split(", ") || [],
           lenses: user.freelancerProfile?.equipmentLenses?.split(", ") || [],
           lighting: user.freelancerProfile?.equipmentLighting?.split(", ") || [],
-        })
-        setGigs(user.freelancerProfile?.gigs || [])
+        });
+        setGigs(user.freelancerProfile?.gigs || []);
         setBadges(
           user.freelancerProfile?.userBadges?.map((b) => ({
             id: b.id,
-            name: b.badge.name,
+            name: b.badge?.name || "Badge",
             icon: <Trophy className="w-3.5 h-3.5 text-amber-500" />,
             achieved: true,
-            isVisible: b.isVisible,
-          })) || [],
-        )
+            isVisible: b.isVisible || true,
+          })) || []
+        );
         setStats({
-          totalJobs: user.totalJobs || 0,
-          totalHours: user.totalHours || 0,
-          successRate: user.successRate || 0,
+          totalJobs: user.freelancerProfile?.totalJobs || 0,
+          totalHours: user.freelancerProfile?.totalHours || 0,
+          successRate: user.freelancerProfile?.successRate || 0,
           rating: user.rating || 0,
-        })
+        });
 
-        // Determine if the current user is the profile owner
-        const token = localStorage.getItem("token")
+        const token = localStorage.getItem("token");
         if (token) {
-          const decoded = JSON.parse(atob(token.split(".")[1])) // Decode JWT payload
-          setIsOwner(user.id === decoded.id)
+          const decoded = JSON.parse(atob(token.split(".")[1]));
+          setIsOwner(user.id === decoded.id);
         }
       } catch (error) {
-        console.error("Error fetching profile:", error)
+        console.error("Error fetching profile:", error);
+        toast.error(error.response?.data?.message || "Failed to load profile");
       }
-    }
-    fetchProfile()
-  }, [userId])
+    };
 
+    fetchProfile();
+  }, [userId]);
+
+  // Owner-only handlers with isOwner check
   const handleSaveProfile = async (updatedProfile) => {
-    try {
-      const { data } = await axiosInstance.patch("/users/me", updatedProfile)
-      setProfile(data.data)
-      setIsModalOpen(false)
-      showNotificationMessage("Profile updated successfully", "success")
-    } catch (error) {
-      console.error("Error updating profile:", error)
-      showNotificationMessage("Failed to update profile", "error")
+    if (!isOwner) {
+      toast.error("You are not authorized to edit this profile");
+      return;
     }
-  }
+    try {
+      const { data } = await axiosInstance.patch("/users/me", updatedProfile);
+      setProfile(data.data);
+      setIsModalOpen(false);
+      showNotificationMessage("Profile updated successfully", "success");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      showNotificationMessage("Failed to update profile", "error");
+    }
+  };
 
   const handleDeleteItem = async (type, id) => {
+    if (!isOwner) {
+      toast.error("You are not authorized to delete this item");
+      return;
+    }
     try {
-      await axiosInstance.delete(`/users/me/${type}/${id}`)
-      if (type === "portfolio") setPortfolioItems((prev) => prev.filter((item) => item.id !== id))
-      if (type === "gigs") setGigs((prev) => prev.filter((gig) => gig.id !== id))
+      await axiosInstance.delete(`/users/me/${type}/${id}`);
+      if (type === "portfolio") setPortfolioItems((prev) => prev.filter((item) => item.id !== id));
+      if (type === "gigs") setGigs((prev) => prev.filter((gig) => gig.id !== id));
       if (type === "services")
         setAbout((prev) => ({
           ...prev,
           services: prev.services.filter((service) => service.id !== id),
-        }))
-      showNotificationMessage(`${type} item deleted successfully`, "success")
+        }));
+      showNotificationMessage(`${type} item deleted successfully`, "success");
     } catch (error) {
-      console.error(`Error deleting ${type}:`, error)
-      showNotificationMessage(`Failed to delete ${type} item`, "error")
+      console.error(`Error deleting ${type}:`, error);
+      showNotificationMessage(`Failed to delete ${type} item`, "error");
     }
-  }
+  };
 
   const handleUpdateItem = async (type, id, updatedItem) => {
+    if (!isOwner) {
+      toast.error("You are not authorized to update this item");
+      return;
+    }
     try {
-      await axiosInstance.patch(`/users/me`, { [type]: updatedItem })
-      if (type === "portfolio") setPortfolioItems((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
-      if (type === "gigs") setGigs((prev) => prev.map((gig) => (gig.id === id ? updatedItem : gig)))
+      await axiosInstance.patch(`/users/me`, { [type]: updatedItem });
+      if (type === "portfolio") setPortfolioItems((prev) => prev.map((item) => (item.id === id ? updatedItem : item)));
+      if (type === "gigs") setGigs((prev) => prev.map((gig) => (gig.id === id ? updatedItem : gig)));
       if (type === "services")
         setAbout((prev) => ({
           ...prev,
           services: prev.services.map((service) => (service.id === id ? updatedItem : service)),
-        }))
-      showNotificationMessage(`${type} item updated successfully`, "success")
+        }));
+      showNotificationMessage(`${type} item updated successfully`, "success");
     } catch (error) {
-      console.error(`Error updating ${type}:`, error)
-      showNotificationMessage(`Failed to update ${type} item`, "error")
+      console.error(`Error updating ${type}:`, error);
+      showNotificationMessage(`Failed to update ${type} item`, "error");
     }
-  }
+  };
 
   const handleAddItem = async (type) => {
+    if (!isOwner) {
+      toast.error("You are not authorized to add this item");
+      return;
+    }
     try {
-      let payload = {}
-      let response
+      let payload = {};
+      let response;
 
       if (type === "portfolio") {
-        payload = { portfolio: newPortfolioItem }
-        response = await axiosInstance.post("/users/me/portfolio", newPortfolioItem)
-        setPortfolioItems((prev) => [...prev, response.data.data])
+        payload = { portfolio: newPortfolioItem };
+        response = await axiosInstance.post("/users/me/portfolio", newPortfolioItem);
+        setPortfolioItems((prev) => [...prev, response.data.data]);
       } else if (type === "services") {
-        payload = { services: newService }
-        response = await axiosInstance.post("/users/me/services", newService)
+        payload = { services: newService };
+        response = await axiosInstance.post("/users/me/services", newService);
         setAbout((prev) => ({
           ...prev,
           services: [...prev.services, response.data.data],
-        }))
+        }));
       } else if (type === "equipment") {
         const updatedEquipment = {
           ...equipment,
           [newEquipment.type]: [...equipment[newEquipment.type], newEquipment.name],
-        }
-        setEquipment(updatedEquipment)
+        };
+        setEquipment(updatedEquipment);
         payload = {
           [`equipment${newEquipment.type.charAt(0).toUpperCase() + newEquipment.type.slice(1)}`]:
             updatedEquipment[newEquipment.type].join(", "),
-        }
-        await axiosInstance.patch("/users/me", payload)
+        };
+        await axiosInstance.patch("/users/me", payload);
       } else if (type === "gigs") {
-        payload = { gigs: newGig }
-        response = await axiosInstance.post("/users/me/gigs", newGig)
-        setGigs((prev) => [...prev, response.data.data])
+        payload = { gigs: newGig };
+        response = await axiosInstance.post("/users/me/gigs", newGig);
+        setGigs((prev) => [...prev, response.data.data]);
       }
 
-      // Reset form and close modal
-      setIsAddingContent(false)
-      setNewPortfolioItem({
-        title: "",
-        category: "",
-        description: "",
-        mediaType: "image",
-        mediaUrl: "",
-      })
-      setNewService({
-        title: "",
-        description: "",
-        price: "",
-      })
-      setNewEquipment({
-        type: "cameras",
-        name: "",
-      })
-      setNewGig({
-        title: "",
-        description: "",
-        price: "",
-        deliveryTime: "",
-      })
+      setIsAddingContent(false);
+      setNewPortfolioItem({ title: "", category: "", description: "", mediaType: "image", mediaUrl: "" });
+      setNewService({ title: "", description: "", price: "" });
+      setNewEquipment({ type: "cameras", name: "" });
+      setNewGig({ title: "", description: "", price: "", deliveryTime: "" });
 
-      showNotificationMessage(`New ${type} added successfully`, "success")
+      showNotificationMessage(`New ${type} added successfully`, "success");
     } catch (error) {
-      console.error(`Error adding ${type}:`, error)
-      showNotificationMessage(`Failed to add ${type}`, "error")
+      console.error(`Error adding ${type}:`, error);
+      showNotificationMessage(`Failed to add ${type}`, "error");
     }
-  }
+  };
 
   const handleSaveAbout = async () => {
-    try {
-      await axiosInstance.patch("/users/me", { overview: about.text })
-      setIsEditingAbout(false)
-      showNotificationMessage("About section updated successfully", "success")
-    } catch (error) {
-      console.error("Error updating about section:", error)
-      showNotificationMessage("Failed to update about section", "error")
+    if (!isOwner) {
+      toast.error("You are not authorized to edit the about section");
+      return;
     }
-  }
+    try {
+      await axiosInstance.patch("/users/me", { overview: about.text });
+      setIsEditingAbout(false);
+      showNotificationMessage("About section updated successfully", "success");
+    } catch (error) {
+      console.error("Error updating about section:", error);
+      showNotificationMessage("Failed to update about section", "error");
+    }
+  };
 
   const showNotificationMessage = (message, type) => {
-    setNotificationMessage(message)
-    setNotificationType(type)
-    setShowNotification(true)
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setShowNotification(true);
     setTimeout(() => {
-      setShowNotification(false)
-    }, 3000)
-  }
+      setShowNotification(false);
+    }, 3000);
+  };
 
   const handleFileUpload = (e) => {
-    const file = e.target.files[0]
+    if (!isOwner) {
+      toast.error("You are not authorized to upload files");
+      return;
+    }
+    const file = e.target.files[0];
     if (file) {
-      // In a real app, you would upload this file to your server/S3
-      // For now, we'll just create a local URL
-      const localUrl = URL.createObjectURL(file)
+      const localUrl = URL.createObjectURL(file);
       setNewPortfolioItem({
         ...newPortfolioItem,
         mediaUrl: localUrl,
-      })
+      });
     }
-  }
-
+  };
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Notification */}
