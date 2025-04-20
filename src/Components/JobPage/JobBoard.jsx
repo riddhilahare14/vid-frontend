@@ -19,7 +19,7 @@ export function JobBoard() {
     const fetchJobs = async () => {
       try {
         setLoading(true)
-        const response = await axiosInstance.get("/job/all")
+        const response = await axiosInstance.get("/jobs/all")
 
         let fetchedJobs = []
         // Check if response.data.data.jobs exists and is an array
