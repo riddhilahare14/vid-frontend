@@ -13,46 +13,20 @@ export default function ClientJobs() {
     const fetchJobs = async () => {
       try {
         setLoading(true);
-        // In a real application, this would be an actual API call
-        const response = await fetch('/api/v1/job');
+        // Make a request to the actual API endpoint
+        const response = await fetch('http://localhost:3000/api/v1/client/jobs', {
+          headers: {
+            // Include authentication token from localStorage or your auth context
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
         
         if (!response.ok) {
           throw new Error('Failed to fetch jobs');
         }
         
-        // Simulated response data
-        const data = [
-          {
-            id: 1, 
-            title: 'Frontend Developer',
-            description: 'React developer needed for a 3-month project',
-            salary: '$45-60/hr',
-            createdAt: '2025-04-01',
-            applicants: [
-              { id: 101, name: 'John Doe', email: 'john@example.com', experience: '5 years', coverLetter: 'I am very interested in this position...' },
-              { id: 102, name: 'Jane Smith', email: 'jane@example.com', experience: '3 years', coverLetter: 'I believe my skills match perfectly...' }
-            ]
-          },
-          {
-            id: 2, 
-            title: 'Backend Engineer',
-            description: 'Node.js developer for API development',
-            salary: '$55-70/hr',
-            createdAt: '2025-04-05',
-            applicants: [
-              { id: 103, name: 'Mike Johnson', email: 'mike@example.com', experience: '7 years', coverLetter: 'I specialize in building scalable APIs...' }
-            ]
-          },
-          {
-            id: 3, 
-            title: 'UI/UX Designer',
-            description: 'Designer needed for web application redesign',
-            salary: '$40-55/hr',
-            createdAt: '2025-04-10',
-            applicants: []
-          }
-        ];
-        
+        const data = await response.json();
         setJobs(data);
         setLoading(false);
       } catch (err) {
@@ -112,7 +86,7 @@ export default function ClientJobs() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-800">{job.title}</h2>
-                  <p className="text-gray-500 text-sm mt-1">Posted on {job.createdAt}</p>
+                  <p className="text-gray-500 text-sm mt-1">Posted on {new Date(job.createdAt).toLocaleDateString()}</p>
                 </div>
                 <span className="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
                   {job.salary}
@@ -124,17 +98,19 @@ export default function ClientJobs() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center text-gray-600">
                   <Users size={18} className="mr-2" />
-                  <span>{job.applicants.length} applicant{job.applicants.length !== 1 ? 's' : ''}</span>
+                  <span>
+                    {job.applicants?.length || 0} applicant{(!job.applicants || job.applicants.length !== 1) ? 's' : ''}
+                  </span>
                 </div>
                 
                 <button
                   onClick={() => handleShowApplicants(job)}
                   className={`px-4 py-2 rounded-md flex items-center ${
-                    job.applicants.length > 0 
+                    job.applicants && job.applicants.length > 0 
                       ? 'bg-blue-600 text-white hover:bg-blue-700' 
                       : 'bg-gray-200 text-gray-500 cursor-not-allowed'
                   }`}
-                  disabled={job.applicants.length === 0}
+                  disabled={!job.applicants || job.applicants.length === 0}
                 >
                   Show Applicants
                 </button>
@@ -161,7 +137,7 @@ export default function ClientJobs() {
             </div>
             
             <div className="p-4 overflow-y-auto max-h-96">
-              {selectedJob.applicants.length === 0 ? (
+              {!selectedJob.applicants || selectedJob.applicants.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   No applicants yet for this position.
                 </div>

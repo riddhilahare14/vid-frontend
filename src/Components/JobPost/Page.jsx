@@ -153,7 +153,7 @@ export default function JobPosting() {
       }
       console.log("Sending payload:", payloadPreview);
 
-      const response = await axiosInstance.post("/job", formDataToSend);
+      const response = await axiosInstance.post("/jobs", formDataToSend);
 
       console.log("Response data:", response.data);
       alert("Job posted successfully!");

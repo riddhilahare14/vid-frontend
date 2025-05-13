@@ -127,14 +127,6 @@ export default function JobDescriptionPage() {
   }, [isModalOpen, userRole]);
 
   const openModal = () => {
-    if (userRole !== 'FREELANCER') {
-      toast.info('Only freelancers can apply for jobs.');
-      return;
-    }
-    if (hasApplied) {
-      toast.info('You have already applied for this job.');
-      return;
-    }
     setIsModalOpen(true);
   };
 
