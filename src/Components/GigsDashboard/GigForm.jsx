@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import {
   ChevronDown,
   ChevronRight,
@@ -18,11 +18,13 @@ import {
   HelpCircle,
   FileText,
   Film,
+  ChevronLeft
 } from "lucide-react";
 import axiosInstance from "../../utils/axios";
 
-export default function CreateGigForm() {
+export default function CreateGigForm({ isUpdate }) {
   const navigate = useNavigate();
+  const { gigId } = useParams();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: "",
@@ -45,6 +47,7 @@ export default function CreateGigForm() {
     faqs: [],
     sampleWork: [],
   });
+  const [isLoading, setIsLoading] = useState(isUpdate);
 
   const [errors, setErrors] = useState({});
   const [submissionError, setSubmissionError] = useState(null);
@@ -72,6 +75,55 @@ export default function CreateGigForm() {
   ];
   const deliveryTimeOptions = ["1", "2", "3", "5", "7", "14", "21", "30"];
   const revisionOptions = ["1", "2", "3", "5", "Unlimited"];
+
+  // Load existing gig data when in update mode
+  useEffect(() => {
+    if (isUpdate && gigId) {
+      const fetchGigData = async () => {
+        try {
+          setIsLoading(true);
+          const response = await axiosInstance.get(`/gig/${gigId}`);
+          const gig = response.data.data;
+          
+          // Transform the gig data to match the form structure
+          setFormData({
+            title: gig.title || "",
+            category: gig.category || "",
+            description: gig.description || "",
+            pricing: gig.pricing && gig.pricing.length > 0 ? gig.pricing : [
+              {
+                name: "Basic",
+                price: "",
+                deliveryTime: "3",
+                revisions: "1",
+                description: "",
+              },
+            ],
+            thumbnail: null,
+            thumbnailPreview: gig.sampleMedia?.find(m => m.mediaType === "thumbnail")?.mediaUrl || "",
+            tags: gig.tags || [],
+            addOns: gig.packageDetails || [],
+            requirements: gig.requirements || "",
+            faqs: gig.faqs || [],
+            sampleWork: gig.sampleMedia
+              ?.filter(m => m.mediaType !== "thumbnail")
+              ?.map(media => ({
+                preview: media.mediaUrl,
+                type: media.mediaType === "video" ? "video" : "image",
+                existingMedia: true
+              })) || [],
+          });
+        } catch (error) {
+          console.error("Error fetching gig data:", error);
+          alert("Failed to load gig data. Please try again.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      fetchGigData();
+    }
+  }, [isUpdate, gigId]);
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -179,7 +231,7 @@ export default function CreateGigForm() {
 
   // Handle FAQs
   const addFaq = () => {
-    if (formData.faqs.length < 5) {
+    if (formData.faqs?.length < 5) {
       setFormData({ ...formData, faqs: [...formData.faqs, { question: "", answer: "" }] });
     }
   };
@@ -253,7 +305,7 @@ export default function CreateGigForm() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Form submission
+  // Handle form submission
   const handleSubmit = async (status) => {
     if (status === "ACTIVE" && !validateForm()) return;
     if (status === "DRAFT" && !formData.title) {
@@ -264,48 +316,48 @@ export default function CreateGigForm() {
     setIsSubmitting(true);
     setSubmissionError(null);
 
-    const gigData = new FormData();
-    gigData.append("title", formData.title);
-    gigData.append("category", formData.category);
-    gigData.append("description", formData.description);
-    gigData.append("pricing", JSON.stringify(formData.pricing));
-    gigData.append("deliveryTime", formData.pricing[0].deliveryTime);
-    gigData.append(
-      "revisionCount",
-      formData.pricing[0].revisions === "Unlimited" ? null : formData.pricing[0].revisions
-    );
-    gigData.append("tags", JSON.stringify(formData.tags));
-    gigData.append("requirements", formData.requirements);
-    gigData.append("faqs", JSON.stringify(formData.faqs));
-    gigData.append("packageDetails", JSON.stringify(formData.addOns));
-    gigData.append("status", status);
-
-    // if (formData.thumbnail) gigData.append("thumbnail", formData.thumbnail);
-    // formData.sampleWork.forEach((sample, index) => {
-    //   gigData.append(`sampleMedia[${index}][mediaUrl]`, sample.file);
-    //   gigData.append(`sampleMedia[${index}][mediaType]`, sample.type);
-    // });
-
     try {
-      const endpoint = status === "DRAFT" ? "/gig/draft" : "/gig/";
-      const response = await axiosInstance.post(`${endpoint}`, gigData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
+      const gigData = new FormData();
+      gigData.append("title", formData.title);
+      gigData.append("category", formData.category);
+      gigData.append("description", formData.description);
+      gigData.append("pricing", JSON.stringify(formData.pricing));
+      gigData.append("deliveryTime", formData.pricing[0].deliveryTime);
+      gigData.append("revisionCount", formData.pricing[0].revisions === "Unlimited" ? null : formData.pricing[0].revisions);
+      gigData.append("tags", JSON.stringify(formData.tags));
+      gigData.append("requirements", formData.requirements);
+      gigData.append("faqs", JSON.stringify(formData.faqs));
+      gigData.append("packageDetails", JSON.stringify(formData.addOns));
+      
+      if (formData.thumbnail && !formData.thumbnail.existingMedia) {
+        gigData.append("thumbnail", formData.thumbnail);
+      }
+
+      formData.sampleWork.forEach((work, index) => {
+        if (work.file && !work.existingMedia) {
+          gigData.append("sampleMedia", work.file);
+        }
       });
 
-      console.log(`Gig ${status === "ACTIVE" ? "published" : "saved as draft"} successfully:`, response.data);
+      let response;
+      if (isUpdate) {
+        response = await axiosInstance.put(`/gig/${gigId}`, gigData);
+      } else {
+        response = await axiosInstance[status === "ACTIVE" ? "post" : "post"]("/gig", gigData);
+      }
+
       if (status === "ACTIVE") {
         setResultStatus("success");
         setShowResultModal(true);
+        setTimeout(() => {
+          navigate("/gigs-dashboard");
+        }, 2000);
       } else {
-        navigate("/gigs-dashboard?draft=true");
+        navigate("/gigs-dashboard");
       }
     } catch (error) {
       console.error(`Error ${status === "ACTIVE" ? "publishing" : "saving"} gig:`, error);
-      const errorMessage =
-        error.response?.data?.message || `Failed to ${status === "ACTIVE" ? "publish" : "save"} gig. Please try again.`;
+      const errorMessage = error.response?.data?.message || `Failed to ${status === "ACTIVE" ? "publish" : "save"} gig. Please try again.`;
       setSubmissionError(errorMessage);
       if (status === "ACTIVE") {
         setResultStatus("error");
@@ -964,7 +1016,7 @@ export default function CreateGigForm() {
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium">Frequently Asked Questions</h4>
                 </div>
-                {formData.faqs.length < 5 && (
+                {formData.faqs?.length < 5 && (
                   <button
                     type="button"
                     onClick={addFaq}
@@ -975,7 +1027,7 @@ export default function CreateGigForm() {
                   </button>
                 )}
               </div>
-              {formData.faqs.length > 0 ? (
+              {formData.faqs?.length > 0 ? (
                 <div className="space-y-4">
                   {formData.faqs.map((faq, index) => (
                     <div key={index} className="border border-gray-200 rounded-lg p-4 bg-white">
@@ -1098,56 +1150,35 @@ export default function CreateGigForm() {
 
             {/* Result Modal */}
             {showResultModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
-                  {resultStatus === "success" ? (
-                    <>
-                      <div className="flex justify-center mb-4">
-                        <div className="bg-green-100 p-3 rounded-full">
-                          <Check size={32} className="text-green-600" />
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Gig Published!</h3>
-                      <p className="text-gray-600 mb-6 text-center">
-                        Your gig has been successfully published and is now live.
-                      </p>
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => navigate("/gigs-dashboard?success=true")}
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                        >
-                          Go to Dashboard
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex justify-center mb-4">
-                        <div className="bg-red-100 p-3 rounded-full">
-                          <AlertCircle size={32} className="text-red-600" />
-                        </div>
-                      </div>
-                      <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">Publication Failed</h3>
-                      <p className="text-gray-600 mb-6 text-center">{submissionError}</p>
-                      <div className="flex justify-center gap-3">
-                        <button
-                          onClick={() => setShowResultModal(false)}
-                          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                        >
-                          Close
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowResultModal(false);
-                            setShowConfirmModal(true);
-                          }}
-                          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                        >
-                          Try Again
-                        </button>
-                      </div>
-                    </>
-                  )}
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+                <div className="bg-white rounded-xl p-6 md:p-8 shadow-2xl max-w-md w-full">
+                  <div className={`mx-auto w-16 h-16 flex items-center justify-center rounded-full ${
+                    resultStatus === "success" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                  }`}>
+                    {resultStatus === "success" ? (
+                      <Check className="w-8 h-8" />
+                    ) : (
+                      <AlertCircle className="w-8 h-8" />
+                    )}
+                  </div>
+                  <h3 className="text-xl font-semibold text-center mt-4">
+                    {resultStatus === "success" 
+                      ? `Gig ${isUpdate ? "Updated" : "Published"} Successfully!` 
+                      : `Failed to ${isUpdate ? "Update" : "Publish"} Gig`}
+                  </h3>
+                  <p className="text-gray-600 text-center mt-2">
+                    {resultStatus === "success"
+                      ? "Your gig is now live and visible to clients."
+                      : submissionError}
+                  </p>
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={() => setShowResultModal(false)}
+                      className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                    >
+                      {resultStatus === "success" ? "OK" : "Try Again"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -1160,50 +1191,70 @@ export default function CreateGigForm() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Create a New Gig</h1>
-        <p className="text-gray-600">Showcase your video editing expertise and attract clients.</p>
-      </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <header className="border-b bg-white dark:bg-gray-800 dark:border-gray-700 py-4">
+        <div className="container max-w-6xl mx-auto px-4">
+          <div className="flex items-center">
+            <Link to="/gigs-dashboard" className="text-gray-500 hover:text-gray-700 mr-4">
+              <ChevronLeft className="w-5 h-5" />
+            </Link>
+            <h1 className="text-xl font-bold">{isUpdate ? "Update Gig" : "Create New Gig"}</h1>
+          </div>
+        </div>
+      </header>
 
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          {[1, 2, 3, 4].map((step) => (
-            <div key={step} className="flex flex-col items-center">
-              <div
-                className={`flex items-center justify-center w-10 h-10 rounded-full border-2 mb-2 ${
-                  currentStep === step
-                    ? "border-purple-600 bg-purple-600 text-white"
-                    : currentStep > step
-                    ? "border-purple-600 bg-white text-purple-600"
-                    : "border-gray-300 bg-white text-gray-400"
-                }`}
-              >
-                {currentStep > step ? <Check size={18} /> : step}
-              </div>
-              <div
-                className={`text-sm font-medium ${
-                  currentStep === step ? "text-purple-600" : currentStep > step ? "text-gray-700" : "text-gray-400"
-                }`}
-              >
-                {step === 1 && "Basic Info"}
-                {step === 2 && "Pricing"}
-                {step === 3 && "Media"}
-                {step === 4 && "Additional"}
-              </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        </div>
+      ) : (
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Create a New Gig</h1>
+            <p className="text-gray-600">Showcase your video editing expertise and attract clients.</p>
+          </div>
+
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className="flex flex-col items-center">
+                  <div
+                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 mb-2 ${
+                      currentStep === step
+                        ? "border-purple-600 bg-purple-600 text-white"
+                        : currentStep > step
+                        ? "border-purple-600 bg-white text-purple-600"
+                        : "border-gray-300 bg-white text-gray-400"
+                    }`}
+                  >
+                    {currentStep > step ? <Check size={18} /> : step}
+                  </div>
+                  <div
+                    className={`text-sm font-medium ${
+                      currentStep === step ? "text-purple-600" : currentStep > step ? "text-gray-700" : "text-gray-400"
+                    }`}
+                  >
+                    {step === 1 && "Basic Info"}
+                    {step === 2 && "Pricing"}
+                    {step === 3 && "Media"}
+                    {step === 4 && "Additional"}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-        <div className="relative mt-2">
-          <div className="absolute top-0 left-0 h-1 bg-gray-200 w-full rounded-full" />
-          <div
-            className="absolute top-0 left-0 h-1 bg-purple-600 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep - 1) * 33.33}%` }}
-          />
-        </div>
-      </div>
+            <div className="relative mt-2">
+              <div className="absolute top-0 left-0 h-1 bg-gray-200 w-full rounded-full" />
+              <div
+                className="absolute top-0 left-0 h-1 bg-purple-600 rounded-full transition-all duration-300"
+                style={{ width: `${(currentStep - 1) * 33.33}%` }}
+              />
+            </div>
+          </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">{renderFormStep()}</div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">{renderFormStep()}</div>
+        </div>
+      )}
     </div>
   );
 }

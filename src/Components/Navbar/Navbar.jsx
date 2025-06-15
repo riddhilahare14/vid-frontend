@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { clearUser } from "../../redux/userSlice";
 import NavbarLogo from "./NavbarLogo";
 import NavbarLinks from "./NavbarLinks";
@@ -13,6 +14,7 @@ const Navbar = () => {
   const user = useAuth();
   console.log("Navbar user state:", user);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
@@ -31,6 +33,7 @@ const Navbar = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("hasSkippedFreelancerModal"); // Reset skip flag
     handleLinkClick("home");
+    navigate("/");
   };
 
   return (

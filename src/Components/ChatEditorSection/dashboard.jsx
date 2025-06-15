@@ -30,6 +30,32 @@ export default function ChatDashboard() {
       { id: "mile-2", name: "Rough Cut Done", completed: true, icon: "Clapperboard" },
       { id: "mile-3", name: "Final Delivery", completed: false, icon: "Package" },
     ],
+    messages: [
+      {
+        id: "msg-1",
+        sender: "system",
+        content: "Project brief pinned",
+        isPinned: true,
+        timestamp: "10:00 AM",
+        reactions: [],
+      },
+      {
+        id: "msg-2",
+        sender: "client",
+        content: "Can we make the intro a bit faster?",
+        timestamp: "10:15 AM",
+        reactions: [],
+        replyTo: null,
+      },
+      {
+        id: "msg-3",
+        sender: "you",
+        content: "Sure, I'll adjust the pacing and send a new version this afternoon.",
+        timestamp: "10:20 AM",
+        reactions: [],
+        replyTo: "msg-2",
+      },
+    ],
   })
 
   const handleNewTask = (task) => {
@@ -44,6 +70,17 @@ export default function ChatDashboard() {
     setShowInvoiceModal(true)
   }
 
+  const handleProjectSelect = (project) => {
+    // In a real application, you would fetch project-specific data here
+    setCurrentProject({
+      ...project,
+      tasks: currentProject.tasks, // Keep existing tasks for now
+      drafts: currentProject.drafts, // Keep existing drafts for now
+      milestones: currentProject.milestones, // Keep existing milestones for now
+      messages: currentProject.messages, // Keep existing messages for now
+    })
+  }
+
   return (
     <ThemeProvider>
       <div className="flex h-screen bg-gray-900 dark:bg-gray-900 text-gray-800 dark:text-white overflow-hidden transition-colors duration-200">
@@ -53,6 +90,7 @@ export default function ChatDashboard() {
             onNewTask={() => setShowTaskModal(true)}
             onGenerateInvoice={handleGenerateInvoice}
             isCollapsed={leftPanelCollapsed}
+            onProjectSelect={handleProjectSelect}
           />
         </div>
 

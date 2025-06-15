@@ -1,107 +1,145 @@
-import { Camera } from "lucide-react"
+
+import { Star, Award, Briefcase, Shield, ChevronDown } from "lucide-react"
 
 export function ProfileSettings() {
   // Read-only data
   const userData = {
     name: "John Doe",
-    username: "johndoe",
     bio: "Video Editor with 5+ years in YouTube content specializing in motion graphics and color grading. Worked with top creators and brands to deliver high-quality video content.",
     skills: ["Motion Graphics", "Color Grading", "Video Editing", "After Effects", "Premiere Pro"],
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl bg-white shadow-lg dark:bg-slate-900">
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 text-white">
-        <h2 className="text-xl font-bold">Profile Information</h2>
-        <p className="text-blue-100">Your professional information visible to clients</p>
-      </div>
-      <div className="p-6">
-        <div className="space-y-8">
-          <div className="flex flex-col gap-6 sm:flex-row">
-            <div className="flex flex-col items-center space-y-3">
-              <div className="relative">
-                <div className="h-24 w-24 overflow-hidden rounded-full border-4 border-white shadow-md">
-                  <img src="/placeholder.svg?height=96&width=96" alt="Profile" className="h-full w-full object-cover" />
-                </div>
-                <button className="absolute -bottom-2 -right-2 flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white shadow-md transition-transform hover:scale-110">
-                  <Camera className="h-4 w-4" />
+    <div className="space-y-8">
+      <div className="overflow-hidden rounded-xl border border-violet-200 dark:border-violet-800 bg-white dark:bg-slate-900">
+        <div className="border-b border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-bold text-violet-900 dark:text-violet-100">Profile Information</h2>
+            <p className="text-violet-600 dark:text-violet-400 text-sm">
+              Your professional information visible to clients
+            </p>
+          </div>
+          <div className="px-3 py-1 bg-violet-100 dark:bg-violet-800/40 rounded-full text-xs font-medium text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700">
+            Public Profile
+          </div>
+        </div>
+
+        <div className="p-6">
+          <div className="space-y-8">
+            <div className="space-y-2">
+              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Star className="h-4 w-4 mr-2 text-violet-500" />
+                Display Name
+              </label>
+              <div className="rounded-lg border border-violet-100 bg-violet-50/50 px-4 py-3 text-gray-800 dark:border-violet-800/50 dark:bg-violet-900/10 dark:text-gray-200">
+                {userData.name}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Briefcase className="h-4 w-4 mr-2 text-violet-500" />
+                Professional Bio
+              </label>
+              <div className="rounded-lg border border-violet-100 bg-violet-50/50 p-4 text-gray-800 dark:border-violet-800/50 dark:bg-violet-900/10 dark:text-gray-200">
+                <p>{userData.bio}</p>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Brief description of your skills and experience
+              </p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Award className="h-4 w-4 mr-2 text-violet-500" />
+                Skills & Expertise
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                {userData.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="rounded-full bg-violet-50 px-3 py-1.5 text-sm font-medium text-violet-700 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-300 dark:border-violet-800"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Skills that showcase your expertise</p>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Shield className="h-4 w-4 mr-2 text-violet-500" />
+                  Profile Visibility
+                </label>
+                <button className="flex items-center text-xs font-medium text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300">
+                  <ChevronDown className="h-3.5 w-3.5 ml-1" />
+                  Advanced Settings
                 </button>
               </div>
-              <div className="text-center text-sm text-gray-500 dark:text-gray-400">Recommended: 400x400px</div>
-            </div>
-            <div className="flex-1 space-y-6">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Display Name</label>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    {userData.name}
+
+              <div className="space-y-4 rounded-lg border border-violet-100 p-4 dark:border-violet-800/50 bg-violet-50/50 dark:bg-violet-900/10">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Public Profile</h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Make your profile visible to everyone</p>
+                  </div>
+                  <label className="relative inline-flex cursor-pointer items-center">
+                    <input type="checkbox" defaultChecked className="peer sr-only" />
+                    <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-violet-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"></div>
+                  </label>
+                </div>
+
+                <div className="border-t border-violet-100 dark:border-violet-800/30 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Available for Work</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Show clients you're open to new projects
+                      </p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input type="checkbox" defaultChecked className="peer sr-only" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-violet-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"></div>
+                    </label>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Username</label>
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    {userData.username}
+
+                <div className="border-t border-violet-100 dark:border-violet-800/30 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Featured Creator</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Apply to be featured on our homepage</p>
+                    </div>
+                    <label className="relative inline-flex cursor-pointer items-center">
+                      <input type="checkbox" className="peer sr-only" />
+                      <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-violet-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"></div>
+                    </label>
                   </div>
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Professional Bio</label>
-                <div className="min-h-[120px] rounded-lg border border-gray-200 bg-gray-50 p-3 text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                  {userData.bio}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Brief description of your skills and experience
-                </p>
-              </div>
             </div>
-          </div>
 
-          <div className="space-y-3 pt-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Skills & Expertise</label>
-            <div className="flex flex-wrap gap-2">
-              {userData.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="rounded-full bg-blue-50 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-3 pt-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Profile Visibility</label>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Public Profile</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Make your profile visible to everyone</p>
+            <div className="rounded-lg border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/10 p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 pt-0.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-600 border border-violet-200 dark:bg-violet-900/30 dark:text-violet-400 dark:border-violet-800">
+                    <Star className="h-4 w-4" />
+                  </div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" defaultChecked className="peer sr-only" />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"></div>
-                </label>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Available for Work</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Show clients you're open to new projects</p>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-violet-800 dark:text-violet-300">Complete your profile</h3>
+                  <div className="mt-1 text-sm text-violet-600 dark:text-violet-400">
+                    <p>Add portfolio items and testimonials to increase your visibility by 40%</p>
+                  </div>
+                  <div className="mt-2">
+                    <button className="text-xs font-medium text-violet-700 hover:text-violet-800 dark:text-violet-300 dark:hover:text-violet-200">
+                      Complete Profile →
+                    </button>
+                  </div>
                 </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" defaultChecked className="peer sr-only" />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"></div>
-                </label>
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">Featured Creator</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Apply to be featured on our homepage</p>
-                </div>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" className="peer sr-only" />
-                  <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none dark:bg-gray-700"></div>
-                </label>
               </div>
             </div>
           </div>
@@ -110,4 +148,3 @@ export function ProfileSettings() {
     </div>
   )
 }
-

@@ -7,6 +7,7 @@ import ProtectedRoute from './Components/protectedRoutes';
 import ProfileCompletionModal from './Components/ProfileCompletionModal';
 import axiosInstance from './utils/axios';
 import ClientJobs from './Components/JobPage/ClientJobs';
+import GigDescriptionPage from './Components/GigSection/GigDescriptionPage';
 
 const Homepage = lazy(() => import('./Components/Homepage'));
 const Homepage2 = lazy(() => import('./Components/Homepage2'));
@@ -157,6 +158,7 @@ function NavbarPage() {
             <Route path="/clientProfile" element={<ClientProfile />} />
             <Route path="/gigs-dashboard" element={<GigDashboard />} />
             <Route path="/create-gig" element={<CreateGigForm />} />
+            <Route path="/update-gig/:gigId" element={<CreateGigForm isUpdate={true} />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/job/:jobId" element={<JobDescriptionPage />} />
             <Route path="/gig" element={<GigMainPage />} />
@@ -164,9 +166,16 @@ function NavbarPage() {
             <Route path="/gig/:gigId" element={<VideoEditingGig />} />
             <Route path='/jobs' element={<ClientJobs/>}></Route>
             <Route path="/jobs/:jobId/shortlist" element={<Shortlist />} />
-            <Route path="/freelancers/:freelancerId" element={<ProfilePage />} />
+            <Route path="/freelancerProfile/:freelancerId" element={<ProfilePage />} />
             <Route path="/shortlist/:jobId" element={<JobApplicants />} />
-            
+            <Route path="/editor/workspace" element={<ChatDashboard />} />
+            <Route path="/client/workspace" element={<ChatClientDashboard />} />
+            <Route path="/gigd" element={<GigDescriptionPage />} />
+            <Route path="/workspace" element={
+               user?.role === "FREELANCER"
+                ? <ChatDashboard />
+                : <ChatClientDashboard />
+            } />
 
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           </Routes>

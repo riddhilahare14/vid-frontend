@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useParams } from "react-router-dom";
 import {
   Camera,
   Check,
@@ -41,7 +42,8 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-export default function ProfilePage({ userId }) {
+export default function ProfilePage() {
+  const { freelancerId } = useParams();
   const [activeTab, setActiveTab] = useState("portfolio");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(null);
@@ -74,8 +76,14 @@ export default function ProfilePage({ userId }) {
   const [newGig, setNewGig] = useState({
     title: "",
     description: "",
-    price: "",
-    deliveryTime: "",
+    pricing: JSON.stringify({
+      basic: 0,
+      standard: 0,
+      premium: 0
+    }),
+    deliveryTime: 0,
+    category: "",
+    thumbnailUrl: ""
   });
   const [isEditingAbout, setIsEditingAbout] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
@@ -88,54 +96,93 @@ export default function ProfilePage({ userId }) {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const endpoint = userId ? `/users/freelancers/${userId}` : "/users/me";
+        const endpoint = freelancerId ? `/users/profile/${freelancerId}` : "/users/me";
+        console.log('Fetching profile - Endpoint:', endpoint);
+        console.log('Freelancer ID from params:', freelancerId);
+        
         const { data } = await axiosInstance.get(endpoint);
-        const user = data.data;
+        console.log('Raw API Response:', data);
+        console.log('User data received:', data.data);
+        
+        const userData = data.data;
 
+        if (!userData) {
+          console.error('No user data found in response');
+          toast.error("Freelancer profile not found");
+          return;
+        }
+
+        // Set profile data
         setProfile({
-          firstname: user.firstname || "",
-          lastname: user.lastname || "",
-          profilePicture: user.profilePicture || "/placeholder.svg?height=160&width=160",
-          isVerified: user.isVerified || false,
-          lastNameChange: user.lastNameChange || null,
-          hourlyRate: user.freelancerProfile?.hourlyRate || 85,
-          country: user.country || "United States",
-          city: user.freelancerProfile?.city || "New York",
-          bio: user.freelancerProfile?.bio || "",
+          id: userData.id,
+          firstname: userData.firstname || "",
+          lastname: userData.lastname || "",
+          profilePicture: userData.profilePicture || "/placeholder.svg?height=160&width=160",
+          isVerified: userData.isVerified || false,
+          lastNameChange: userData.lastNameChange || null,
+          hourlyRate: userData.freelancerProfile?.hourlyRate || 85,
+          country: userData.country || "United States",
+          city: userData.freelancerProfile?.city || "New York",
+          bio: userData.bio || "",
         });
 
-        setPortfolioItems(user.freelancerProfile?.portfolio || []);
+        // Map portfolio videos
+        const mappedPortfolioItems = (userData.freelancerProfile?.portfolioVideos || []).map(video => ({
+          id: video.id,
+          title: video.title,
+          mediaType: "video",
+          mediaUrl: video.videoUrl,
+          description: video.description,
+          category: video.category,
+          uploadedAt: video.uploadedAt
+        }));
+
+        setPortfolioItems(mappedPortfolioItems);
+        
+        // Set about data
         setAbout({
-          text: user.freelancerProfile?.overview || "",
-          services: user.freelancerProfile?.skills || [],
+          text: userData.freelancerProfile?.overview || "",
+          services: userData.freelancerProfile?.skills || [],
         });
+
+        // Set equipment data
         setEquipment({
-          cameras: user.freelancerProfile?.equipmentCameras?.split(", ") || [],
-          lenses: user.freelancerProfile?.equipmentLenses?.split(", ") || [],
-          lighting: user.freelancerProfile?.equipmentLighting?.split(", ") || [],
+          cameras: userData.freelancerProfile?.equipmentCameras?.split(", ") || [],
+          lenses: userData.freelancerProfile?.equipmentLenses?.split(", ") || [],
+          lighting: userData.freelancerProfile?.equipmentLighting?.split(", ") || [],
         });
-        setGigs(user.freelancerProfile?.gigs || []);
+
+        // Set gigs data
+        setGigs(userData.freelancerProfile?.gigs || []);
+
+        // Set badges
         setBadges(
-          user.freelancerProfile?.userBadges?.map((b) => ({
+          (userData.freelancerProfile?.userBadges || []).map((b) => ({
             id: b.id,
             name: b.badge?.name || "Badge",
             icon: <Trophy className="w-3.5 h-3.5 text-amber-500" />,
             achieved: true,
             isVisible: b.isVisible || true,
-          })) || []
+          }))
         );
+
+        // Set stats data
         setStats({
-          totalJobs: user.freelancerProfile?.totalJobs || 0,
-          totalHours: user.freelancerProfile?.totalHours || 0,
-          successRate: user.freelancerProfile?.successRate || 0,
-          rating: user.rating || 0,
+          totalJobs: userData.totalJobs || 0,
+          totalHours: userData.totalHours || 0,
+          successRate: userData.successRate || 0,
+          rating: userData.rating || 0,
         });
 
+        // Check if current user is the owner
         const token = localStorage.getItem("token");
         if (token) {
           const decoded = JSON.parse(atob(token.split(".")[1]));
-          setIsOwner(user.id === decoded.id);
+          setIsOwner(!freelancerId || userData.id === decoded.id);
+        } else {
+          setIsOwner(false);
         }
+
       } catch (error) {
         console.error("Error fetching profile:", error);
         toast.error(error.response?.data?.message || "Failed to load profile");
@@ -143,12 +190,12 @@ export default function ProfilePage({ userId }) {
     };
 
     fetchProfile();
-  }, [userId]);
+  }, [freelancerId]);
 
   // Owner-only handlers with isOwner check
   const handleSaveProfile = async (updatedProfile) => {
     if (!isOwner) {
-      toast.error("You are not authorized to edit this profile");
+      toast.error("You don't have permission to edit this profile");
       return;
     }
     try {
@@ -164,7 +211,7 @@ export default function ProfilePage({ userId }) {
 
   const handleDeleteItem = async (type, id) => {
     if (!isOwner) {
-      toast.error("You are not authorized to delete this item");
+      toast.error("You don't have permission to delete items from this profile");
       return;
     }
     try {
@@ -185,7 +232,7 @@ export default function ProfilePage({ userId }) {
 
   const handleUpdateItem = async (type, id, updatedItem) => {
     if (!isOwner) {
-      toast.error("You are not authorized to update this item");
+      toast.error("You don't have permission to update items on this profile");
       return;
     }
     try {
@@ -206,7 +253,7 @@ export default function ProfilePage({ userId }) {
 
   const handleAddItem = async (type) => {
     if (!isOwner) {
-      toast.error("You are not authorized to add this item");
+      toast.error("You don't have permission to add items to this profile");
       return;
     }
     try {
@@ -245,7 +292,11 @@ export default function ProfilePage({ userId }) {
       setNewPortfolioItem({ title: "", category: "", description: "", mediaType: "image", mediaUrl: "" });
       setNewService({ title: "", description: "", price: "" });
       setNewEquipment({ type: "cameras", name: "" });
-      setNewGig({ title: "", description: "", price: "", deliveryTime: "" });
+      setNewGig({ title: "", description: "", pricing: JSON.stringify({
+        basic: 0,
+        standard: 0,
+        premium: 0
+      }), deliveryTime: 0, category: "", thumbnailUrl: "" });
 
       showNotificationMessage(`New ${type} added successfully`, "success");
     } catch (error) {
@@ -256,7 +307,7 @@ export default function ProfilePage({ userId }) {
 
   const handleSaveAbout = async () => {
     if (!isOwner) {
-      toast.error("You are not authorized to edit the about section");
+      toast.error("You don't have permission to edit this profile");
       return;
     }
     try {
@@ -280,7 +331,7 @@ export default function ProfilePage({ userId }) {
 
   const handleFileUpload = (e) => {
     if (!isOwner) {
-      toast.error("You are not authorized to upload files");
+      toast.error("You don't have permission to upload files to this profile");
       return;
     }
     const file = e.target.files[0];
@@ -727,15 +778,24 @@ export default function ProfilePage({ userId }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Basic Package Price</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <DollarSign className="w-4 h-4 text-gray-500" />
                       </div>
                       <input
-                        type="text"
-                        value={newGig.price}
-                        onChange={(e) => setNewGig({ ...newGig, price: e.target.value })}
+                        type="number"
+                        value={typeof newGig.pricing === 'string' ? JSON.parse(newGig.pricing).basic : newGig.pricing.basic}
+                        onChange={(e) => {
+                          const pricing = typeof newGig.pricing === 'string' ? JSON.parse(newGig.pricing) : newGig.pricing;
+                          setNewGig({
+                            ...newGig,
+                            pricing: JSON.stringify({
+                              ...pricing,
+                              basic: parseFloat(e.target.value)
+                            })
+                          });
+                        }}
                         className="w-full p-2.5 pl-10 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
                         placeholder="Enter starting price"
                       />
@@ -743,19 +803,41 @@ export default function ProfilePage({ userId }) {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time (days)</label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Calendar className="w-4 h-4 text-gray-500" />
                       </div>
                       <input
-                        type="text"
+                        type="number"
                         value={newGig.deliveryTime}
-                        onChange={(e) => setNewGig({ ...newGig, deliveryTime: e.target.value })}
+                        onChange={(e) => setNewGig({ ...newGig, deliveryTime: parseInt(e.target.value) })}
                         className="w-full p-2.5 pl-10 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                        placeholder="E.g., 3 days"
+                        placeholder="E.g., 3"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input
+                      type="text"
+                      value={newGig.category || ""}
+                      onChange={(e) => setNewGig({ ...newGig, category: e.target.value })}
+                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      placeholder="E.g., Video Editing"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail URL</label>
+                    <input
+                      type="text"
+                      value={newGig.thumbnailUrl}
+                      onChange={(e) => setNewGig({ ...newGig, thumbnailUrl: e.target.value })}
+                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      placeholder="Enter thumbnail URL"
+                    />
                   </div>
                 </div>
               )}
@@ -1284,14 +1366,21 @@ export default function ProfilePage({ userId }) {
                       <div className="p-6">
                         <h3 className="font-semibold text-lg">{gig.title}</h3>
                         <div className="flex items-center gap-2 mt-1">
-                          <div className="text-xl font-bold text-purple-600">{gig.price}</div>
+                          <div className="text-xl font-bold text-purple-600">
+                            ${typeof gig.pricing === 'string' ? JSON.parse(gig.pricing).basic : gig.pricing?.basic}
+                          </div>
                           <div className="text-sm text-gray-500">Starting price</div>
                         </div>
                         <p className="mt-3 text-sm text-gray-600 line-clamp-3">{gig.description}</p>
                         <div className="flex items-center gap-1 mt-4 text-sm">
                           <Clock className="w-4 h-4 text-gray-500" />
-                          <span>Delivery in {gig.deliveryTime}</span>
+                          <span>Delivery in {gig.deliveryTime} days</span>
                         </div>
+                        {gig.category && (
+                          <div className="mt-2 text-sm text-gray-500">
+                            Category: {gig.category}
+                          </div>
+                        )}
                         {!isOwner && (
                           <button className="w-full mt-4 py-2 px-4 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-md text-sm font-medium transition-all duration-300 shadow-sm hover:shadow">
                             Order Now

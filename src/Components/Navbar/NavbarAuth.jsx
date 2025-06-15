@@ -15,12 +15,16 @@ import {
   Calendar,
   Shield,
   ChevronDown,
-  Briefcase, // Added for Gigs Dashboard icon
+  Briefcase,
+  XCircle,
 } from "lucide-react";
+import axiosInstance from "../../utils/axios";
 
 const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
   const profileDropdownRef = useRef(null);
   const notificationsRef = useRef(null);
 
@@ -37,32 +41,44 @@ const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const notifications = [
-    {
-      id: 1,
-      title: "New message received",
-      description: "John Doe sent you a message",
-      time: "2 minutes ago",
-      read: false,
-      icon: <MessageSquare className="w-5 h-5 text-blue-500" />,
-    },
-    {
-      id: 2,
-      title: "Event reminder",
-      description: "Team meeting in 30 minutes",
-      time: "30 minutes ago",
-      read: false,
-      icon: <Calendar className="w-5 h-5 text-green-500" />,
-    },
-    {
-      id: 3,
-      title: "Account security",
-      description: "Your password was changed successfully",
-      time: "2 hours ago",
-      read: true,
-      icon: <Shield className="w-5 h-5 text-purple-500" />,
-    },
-  ];
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      const response = await axiosInstance.get("/notifications");
+      setNotifications(response.data.data.notifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.token && isNotificationsOpen) {
+      fetchNotifications();
+    }
+  }, [user?.token, isNotificationsOpen]);
+
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await axiosInstance.put(`/notifications/${notificationId}/read`);
+      setNotifications(notifications.map(n => 
+        n.id === notificationId ? { ...n, isRead: true } : n
+      ));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await axiosInstance.put("/notifications/read-all");
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
 
   // Define base menu sections
   const baseMenuSections = [
@@ -73,6 +89,14 @@ const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
           name: "Dashboard",
           icon: <User className="w-4 h-4" />,
           link: user?.role === "FREELANCER" ? "/editor-dashboard" : user?.role === "CLIENT" ? "/client-dashboard" : "/dashboard",
+        },
+        {
+          name: "Workspace",
+          icon: <MessageSquare className="w-4 h-4" />,
+          link:
+            user?.role === "EDITOR" || user?.role === "FREELANCER"
+              ? "/editor/workspace"
+              : "/client/workspace",
         },
         {
           name: "Profile",
@@ -128,9 +152,9 @@ const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
               aria-label="Notifications"
             >
               <Bell className="w-6 h-6" />
-              {notifications.filter((n) => !n.read).length > 0 && (
+              {notifications.filter((n) => !n.isRead).length > 0 && (
                 <span className="absolute top-0 right-0 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-gradient-to-r from-red-500 to-pink-500 rounded-full transform transition-transform duration-300 hover:scale-110">
-                  {notifications.filter((n) => !n.read).length}
+                  {notifications.filter((n) => !n.isRead).length}
                 </span>
               )}
             </button>
@@ -144,30 +168,62 @@ const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
               <div className="px-4 py-3 border-b border-gray-100">
                 <div className="flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
-                  <span className="text-xs font-medium text-purple-600 hover:text-purple-800 cursor-pointer transition-colors">
+                  <button
+                    onClick={handleMarkAllAsRead}
+                    className="text-xs font-medium text-purple-600 hover:text-purple-800 cursor-pointer transition-colors"
+                  >
                     Mark all as read
-                  </span>
+                  </button>
                 </div>
               </div>
               <div className="max-h-96 overflow-y-auto">
-                {notifications.length > 0 ? (
+                {isLoading ? (
+                  <div className="px-4 py-6 text-center text-gray-500">
+                    <p>Loading notifications...</p>
+                  </div>
+                ) : notifications.length > 0 ? (
                   notifications.map((notification) => (
                     <div
                       key={notification.id}
                       className={`px-4 py-3 hover:bg-purple-50 transition-colors duration-200 border-l-4 ${
-                        notification.read ? "border-transparent" : "border-purple-500"
+                        notification.isRead ? "border-transparent" : "border-purple-500"
                       }`}
+                      onClick={() => !notification.isRead && handleMarkAsRead(notification.id)}
                     >
                       <div className="flex items-start">
-                        <div className="flex-shrink-0 mr-3 mt-1 bg-gray-100 rounded-full p-2">{notification.icon}</div>
+                        <div className="flex-shrink-0 mr-3 mt-1 bg-gray-100 rounded-full p-2">
+                          {notification.entityType === "APPLICATION" ? (
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          ) : notification.type === "MESSAGE" ? (
+                            <MessageSquare className="w-5 h-5 text-blue-500" />
+                          ) : (
+                            <Bell className="w-5 h-5 text-gray-500" />
+                          )}
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <p className={`text-sm font-medium ${notification.read ? "text-gray-700" : "text-gray-900"}`}>
-                              {notification.title}
+                            <p className={`text-sm font-medium ${
+                              notification.entityType === "APPLICATION" ? "text-red-600" : 
+                              notification.isRead ? "text-gray-700" : "text-gray-900"
+                            }`}>
+                              {notification.entityType === "APPLICATION" ? "Application Update" : notification.type.split("_").join(" ")}
                             </p>
-                            <span className="text-xs text-gray-500">{notification.time}</span>
+                            <span className="text-xs text-gray-500">
+                              {notification.metadata?.rejectedAt 
+                                ? new Date(notification.metadata.rejectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                : new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
                           </div>
-                          <p className="text-xs text-gray-600 mt-1">{notification.description}</p>
+                          <p className={`text-xs ${
+                            notification.entityType === "APPLICATION" ? "text-red-600" : "text-gray-600"
+                          } mt-1`}>
+                            {notification.content}
+                            {notification.metadata?.jobTitle && (
+                              <span className="block mt-1 text-gray-500">
+                                Job: {notification.metadata.jobTitle}
+                              </span>
+                            )}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -180,7 +236,7 @@ const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
               </div>
               <div className="px-4 py-3 bg-gray-50 text-center">
                 <Link
-                  to="/all-notifications"
+                  to="/notifications"
                   className="text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors"
                   onClick={() => {
                     setIsNotificationsOpen(false);
@@ -258,34 +314,36 @@ const NavbarAuth = ({ user, handleLogout, handleLinkClick }) => {
                     <p className="px-4 py-1 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       {section.title}
                     </p>
-                    {section.items.map((item) =>
-                      item.action ? (
-                        <button
-                          key={item.name}
-                          onClick={() => {
-                            setIsProfileDropdownOpen(false);
-                            item.action();
-                          }}
-                          className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors duration-200"
-                        >
-                          <span className="mr-3 text-gray-500">{item.icon}</span>
-                          {item.name}
-                        </button>
-                      ) : (
-                        <Link
-                          key={item.name}
-                          to={item.link}
-                          className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors duration-200"
-                          onClick={() => {
-                            setIsProfileDropdownOpen(false);
-                            handleLinkClick && handleLinkClick(item.link.replace("/", ""));
-                          }}
-                        >
-                          <span className="mr-3 text-gray-500">{item.icon}</span>
-                          {item.name}
-                        </Link>
-                      )
-                    )}
+                    {section.items
+                      .filter(item => !item.condition || item.condition)
+                      .map((item) =>
+                        item.action ? (
+                          <button
+                            key={item.name}
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              item.action();
+                            }}
+                            className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors duration-200"
+                          >
+                            <span className="mr-3 text-gray-500">{item.icon}</span>
+                            {item.name}
+                          </button>
+                        ) : (
+                          <Link
+                            key={item.name}
+                            to={item.link}
+                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors duration-200"
+                            onClick={() => {
+                              setIsProfileDropdownOpen(false);
+                              handleLinkClick && handleLinkClick(item.link.replace("/", ""));
+                            }}
+                          >
+                            <span className="mr-3 text-gray-500">{item.icon}</span>
+                            {item.name}
+                          </Link>
+                        )
+                      )}
                   </div>
                 ))}
               </div>

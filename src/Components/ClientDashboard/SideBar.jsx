@@ -3,10 +3,10 @@ import { HomeIcon, BookmarkIcon, CreditCardIcon, CogIcon } from '@heroicons/reac
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const navigation = [
-    { name: 'Projects', href: '#', icon: HomeIcon, tab: 'projects' },
-    { name: 'Shortlist', href: '#', icon: BookmarkIcon, tab: 'shortlist' },
-    { name: 'Payments', href: '#', icon: CreditCardIcon, tab: 'payments' },
-    { name: 'Settings', href: '#', icon: CogIcon, tab: 'settings' },
+    { name: 'Projects', href: '/client-dashboard/projects', icon: HomeIcon, tab: 'projects' },
+    { name: 'Shortlist', href: '/client-dashboard/shortlist', icon: BookmarkIcon, tab: 'shortlist' },
+    { name: 'Payments', href: '/client-dashboard/payments', icon: CreditCardIcon, tab: 'payments' },
+    { name: 'Settings', href: '/client-dashboard/settings', icon: CogIcon, tab: 'settings' },
   ]
 
   return (
@@ -19,7 +19,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
           <a
             key={item.name}
             href={item.href}
-            onClick={() => setActiveTab(item.tab)}
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab(item.tab);
+              window.history.pushState({}, '', item.href);
+            }}
             className={`${
               activeTab === item.tab
                 ? 'bg-gray-900 text-white'

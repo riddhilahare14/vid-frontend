@@ -18,59 +18,6 @@ import {
 } from "lucide-react"
 
 export default function MainPanel({ currentProject }) {
-  const [messages, setMessages] = useState([
-    {
-      id: "msg-1",
-      sender: "system",
-      content: "Project brief pinned",
-      isPinned: true,
-      timestamp: "10:00 AM",
-      reactions: [],
-    },
-    {
-      id: "msg-2",
-      sender: "client",
-      content: "Can we make the intro a bit faster?",
-      timestamp: "10:15 AM",
-      reactions: [],
-      replyTo: null,
-    },
-    {
-      id: "msg-3",
-      sender: "you",
-      content: "Sure, I'll adjust the pacing and send a new version this afternoon.",
-      timestamp: "10:20 AM",
-      reactions: [],
-      replyTo: "msg-2",
-    },
-    {
-      id: "msg-4",
-      sender: "client",
-      content: "Great! Also, can we use a different background music?",
-      timestamp: "10:25 AM",
-      sentiment: "neutral",
-      reactions: [],
-      replyTo: null,
-    },
-    {
-      id: "msg-5",
-      sender: "you",
-      content: "Absolutely. I'll try a few options and include them in the next draft.",
-      timestamp: "10:30 AM",
-      reactions: [{ emoji: "👍", count: 1, users: ["client"] }],
-      replyTo: "msg-4",
-    },
-    {
-      id: "msg-6",
-      sender: "client",
-      content: "The colors look a bit washed out. Can we make them more vibrant?",
-      timestamp: "11:05 AM",
-      sentiment: "negative",
-      reactions: [],
-      replyTo: null,
-    },
-  ])
-
   const [newMessage, setNewMessage] = useState("")
   const [activeTab, setActiveTab] = useState("chat")
   const [selectedDraft, setSelectedDraft] = useState(currentProject.drafts[1])
@@ -86,7 +33,7 @@ export default function MainPanel({ currentProject }) {
   // Auto-scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom()
-  }, [messages])
+  }, [currentProject.messages])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
@@ -105,7 +52,9 @@ export default function MainPanel({ currentProject }) {
       replyTo: replyingTo ? replyingTo.id : null,
     }
 
-    setMessages([...messages, newMsg])
+    // In a real application, you would update the messages in the parent component
+    // For now, we'll just update the local state
+    currentProject.messages.push(newMsg)
     setNewMessage("")
     setReplyingTo(null)
   }
@@ -126,57 +75,53 @@ export default function MainPanel({ currentProject }) {
   }
 
   const handleDeleteMessage = (messageId) => {
-    setMessages(
-      messages.map((msg) =>
-        msg.id === messageId ? { ...msg, content: "This message was deleted", isDeleted: true } : msg,
-      ),
-    )
+    // In a real application, you would update the messages in the parent component
+    const messageIndex = currentProject.messages.findIndex((msg) => msg.id === messageId)
+    if (messageIndex !== -1) {
+      currentProject.messages[messageIndex] = {
+        ...currentProject.messages[messageIndex],
+        content: "This message was deleted",
+        isDeleted: true,
+      }
+    }
   }
 
   const handleAddReaction = (messageId, emoji) => {
-    setMessages(
-      messages.map((msg) => {
-        if (msg.id === messageId) {
-          const existingReactionIndex = msg.reactions.findIndex((r) => r.emoji === emoji)
+    // In a real application, you would update the messages in the parent component
+    const messageIndex = currentProject.messages.findIndex((msg) => msg.id === messageId)
+    if (messageIndex !== -1) {
+      const message = currentProject.messages[messageIndex]
+      const existingReactionIndex = message.reactions.findIndex((r) => r.emoji === emoji)
 
-          if (existingReactionIndex > -1) {
-            // If reaction already exists, update it
-            const updatedReactions = [...msg.reactions]
-            const reaction = updatedReactions[existingReactionIndex]
+      if (existingReactionIndex > -1) {
+        // If reaction already exists, update it
+        const reaction = message.reactions[existingReactionIndex]
 
-            if (reaction.users.includes("you")) {
-              // Remove user from reaction
-              reaction.users = reaction.users.filter((u) => u !== "you")
-              reaction.count--
+        if (reaction.users.includes("you")) {
+          // Remove user from reaction
+          reaction.users = reaction.users.filter((u) => u !== "you")
+          reaction.count--
 
-              // Remove reaction if no users left
-              if (reaction.count === 0) {
-                updatedReactions.splice(existingReactionIndex, 1)
-              }
-            } else {
-              // Add user to reaction
-              reaction.users.push("you")
-              reaction.count++
-            }
-
-            return { ...msg, reactions: updatedReactions }
-          } else {
-            // Add new reaction
-            return {
-              ...msg,
-              reactions: [...msg.reactions, { emoji, count: 1, users: ["you"] }],
-            }
+          // Remove reaction if no users left
+          if (reaction.count === 0) {
+            message.reactions.splice(existingReactionIndex, 1)
           }
+        } else {
+          // Add user to reaction
+          reaction.users.push("you")
+          reaction.count++
         }
-        return msg
-      }),
-    )
+      } else {
+        // Add new reaction
+        message.reactions.push({ emoji, count: 1, users: ["you"] })
+      }
+    }
 
     setShowEmojiPicker(null)
   }
 
   const getReplyMessage = (replyId) => {
-    return messages.find((msg) => msg.id === replyId)
+    return currentProject.messages.find((msg) => msg.id === replyId)
   }
 
   const commonEmojis = ["👍", "❤️", "😂", "😮", "😢", "👏"]
@@ -213,7 +158,7 @@ export default function MainPanel({ currentProject }) {
         <>
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={chatContainerRef}>
-            {messages.map((message) => (
+            {currentProject.messages.map((message) => (
               <div key={message.id} className={`flex ${message.sender === "you" ? "justify-end" : "justify-start"}`}>
                 <div
                   className={`relative max-w-[80%] rounded-lg p-3 ${
@@ -480,58 +425,20 @@ export default function MainPanel({ currentProject }) {
           </div>
         </>
       ) : (
-        <div className="flex-1 flex flex-col">
-          {isStreaming ? (
-            <div className="flex-1 bg-black relative">
-              <div className="absolute top-4 right-4 flex space-x-2">
-                <button className="p-2 bg-gray-800/80 rounded-full">
-                  <Mic className="w-5 h-5 text-white" />
-                </button>
-                <button className="p-2 bg-red-600/80 rounded-full" onClick={() => setIsStreaming(false)}>
-                  <div className="w-5 h-5 flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-sm"></div>
-                  </div>
-                </button>
-              </div>
-              <div className="absolute bottom-4 left-4 bg-gray-900/80 px-3 py-1 rounded-full flex items-center">
-                <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></div>
-                <span className="text-xs font-medium">LIVE</span>
-              </div>
-              <div className="h-full flex items-center justify-center">
-                <p className="text-gray-500">Live stream preview would appear here</p>
-              </div>
-            </div>
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
-              <div className="text-center p-8 max-w-md">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Video className="w-8 h-8 text-blue-500 dark:text-blue-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Start a Collaboration Stream</h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  Share your screen or camera feed in real-time with your client to discuss project details.
-                </p>
-                <button
-                  className="px-6 py-3 bg-blue-500 dark:bg-blue-600 hover:bg-blue-400 dark:hover:bg-blue-500 text-white rounded-lg transition-colors flex items-center justify-center mx-auto"
-                  onClick={() => setIsStreaming(true)}
-                >
-                  <Video className="w-5 h-5 mr-2" />
-                  Start Streaming
-                </button>
-              </div>
-            </div>
-          )}
-
-          {isStreaming && (
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Live Feedback</h3>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 max-h-40 overflow-y-auto">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <p className="mb-2">No feedback yet. Client feedback will appear here during the stream.</p>
-                </div>
-              </div>
-            </div>
-          )}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">Stream not started</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Start streaming to collaborate in real-time
+            </p>
+            <button
+              onClick={() => setIsStreaming(true)}
+              className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              Start Stream
+            </button>
+          </div>
         </div>
       )}
     </div>

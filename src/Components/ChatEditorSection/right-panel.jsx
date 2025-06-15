@@ -1,8 +1,18 @@
-import { useState } from "react"
-import { CheckCircle, Clock, AlertCircle, MoreVertical, Package, Clapperboard, FileCheck } from "lucide-react"
+import { useState, useRef } from "react"
+import { CheckCircle, Clock, AlertCircle, MoreVertical, Package, Clapperboard, FileCheck, File, Upload } from "lucide-react"
 
 export default function RightPanel({ currentProject, setCurrentProject, isCollapsed }) {
   const [activeTab, setActiveTab] = useState("tasks")
+  const [fileCategory, setFileCategory] = useState("all")
+  const fileInputRef = useRef(null)
+
+  // File categories
+  const fileCategories = [
+    { id: "all", label: "All" },
+    { id: "raw", label: "Raw" },
+    { id: "final", label: "Final" },
+    { id: "refs", label: "Refs" },
+  ]
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -50,6 +60,36 @@ export default function RightPanel({ currentProject, setCurrentProject, isCollap
     }
   }
 
+  // Handle file upload
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files)
+    const newFiles = files.map((file) => ({
+      id: `file-${Date.now()}-${file.name}`,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      url: URL.createObjectURL(file),
+      category: fileCategory === "all" ? "raw" : fileCategory, // default to raw if all
+      uploadedAt: new Date().toISOString(),
+      versions: [
+        {
+          version: 1,
+          fileUrl: URL.createObjectURL(file),
+          uploadedAt: new Date().toISOString(),
+        },
+      ],
+    }))
+    setCurrentProject({
+      ...currentProject,
+      files: [...(currentProject.files || []), ...newFiles],
+    })
+  }
+
+  // Filter files by category
+  const filteredFiles = (currentProject.files || []).filter(
+    (file) => fileCategory === "all" || file.category === fileCategory
+  )
+
   if (isCollapsed) return null
 
   return (
@@ -76,7 +116,90 @@ export default function RightPanel({ currentProject, setCurrentProject, isCollap
         >
           Progress
         </button>
+        <button
+          className={`flex-1 px-4 py-3 font-medium text-sm ${
+            activeTab === "files"
+              ? "text-blue-400 border-b-2 border-blue-400"
+              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          }`}
+          onClick={() => setActiveTab("files")}
+        >
+          Files
+        </button>
       </div>
+
+      {/* Files Tab */}
+      {activeTab === "files" && (
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex items-center gap-2 mb-4">
+            {fileCategories.map((cat) => (
+              <button
+                key={cat.id}
+                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                  fileCategory === cat.id
+                    ? "bg-blue-100 text-blue-700 border-blue-400"
+                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600"
+                }`}
+                onClick={() => setFileCategory(cat.id)}
+              >
+                {cat.label}
+              </button>
+            ))}
+            <button
+              className="ml-auto flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Upload className="w-4 h-4 mr-1" /> Upload
+            </button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              className="hidden"
+              multiple
+            />
+          </div>
+          <div className="space-y-3">
+            {filteredFiles.length === 0 && (
+              <div className="text-center text-gray-400 py-8">No files uploaded yet.</div>
+            )}
+            {filteredFiles.map((file) => (
+              <div key={file.id} className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <File className="w-5 h-5 text-blue-400" />
+                    <span className="font-medium text-sm">{file.name}</span>
+                    <span className="text-xs text-gray-400 ml-2">{file.category}</span>
+                  </div>
+                  <a
+                    href={file.url}
+                    download={file.name}
+                    className="text-blue-500 hover:underline text-xs"
+                  >
+                    Download
+                  </a>
+                </div>
+                {/* Version history */}
+                {file.versions && file.versions.length > 1 && (
+                  <div className="mt-2 text-xs text-gray-500">
+                    Versions:
+                    {file.versions.map((ver, idx) => (
+                      <a
+                        key={idx}
+                        href={ver.fileUrl}
+                        download={`${file.name}.v${ver.version}`}
+                        className="ml-2 underline text-blue-400"
+                      >
+                        v{ver.version}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {activeTab === "tasks" ? (
         <div className="flex-1 overflow-y-auto p-4">

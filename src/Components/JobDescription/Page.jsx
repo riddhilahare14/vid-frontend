@@ -25,6 +25,7 @@ export default function JobDescriptionPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasApplied, setHasApplied] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState(null);
   const [applicationStatusLoading, setApplicationStatusLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [applicationText, setApplicationText] = useState('');
@@ -77,9 +78,11 @@ export default function JobDescriptionPage() {
             const statusResponse = await axiosInstance.get(`/jobs/apply/status/${jobId}`);
             console.log('Application status:', statusResponse.data);
             setHasApplied(statusResponse.data.data.hasApplied);
+            setApplicationStatus(statusResponse.data.data.status);
           } catch (statusError) {
             console.warn('Failed to fetch application status:', statusError.response?.status, statusError.message);
             setHasApplied(false);
+            setApplicationStatus(null);
           } finally {
             setApplicationStatusLoading(false);
           }
@@ -214,6 +217,18 @@ export default function JobDescriptionPage() {
           className={`flex items-center justify-center gap-2 font-medium py-3 px-6 rounded-lg transition-colors bg-indigo-600 hover:bg-indigo-700 text-white ${className}`}
         >
           View Shortlist
+        </button>
+      );
+    }
+
+    if (applicationStatus === 'REJECTED') {
+      return (
+        <button
+          disabled
+          className={`flex items-center justify-center gap-2 font-medium py-3 px-6 rounded-lg transition-colors border-2 border-red-500 text-red-500 bg-transparent cursor-not-allowed ${className}`}
+        >
+          <X className="h-4 w-4 text-red-500" />
+          Rejected
         </button>
       );
     }

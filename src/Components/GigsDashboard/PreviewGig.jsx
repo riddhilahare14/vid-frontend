@@ -16,7 +16,19 @@ import axios from "axios"; // Replace with axiosInstance if preferred
 export default function PreviewGig() {
   const { state } = useLocation(); // Get formData from navigation state
   const navigate = useNavigate();
-  const formData = state?.formData || {};
+  const formData = state?.formData || {
+    pricing: [],
+    addOns: [],
+    tags: [],
+    sampleWork: [],
+    requirements: '',
+    description: '',
+    title: '',
+    category: '',
+    thumbnail: null,
+    thumbnailPreview: null,
+    faqs: []
+  };
 
   const [submissionError, setSubmissionError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,7 +117,7 @@ export default function PreviewGig() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-gray-800">Pricing Tiers</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {formData.pricing.map((tier, index) => (
+            {formData.pricing?.map((tier, index) => (
               <div
                 key={index}
                 className={`border-2 rounded-xl p-5 ${
@@ -133,7 +145,7 @@ export default function PreviewGig() {
         </section>
 
         {/* Add-Ons */}
-        {formData.addOns.length > 0 && (
+        {formData.addOns?.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-800">Add-Ons</h2>
             {formData.addOns.map((addOn, index) => (
@@ -167,7 +179,7 @@ export default function PreviewGig() {
         </section>
 
         {/* Tags */}
-        {formData.tags.length > 0 && (
+        {formData.tags?.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-800">Tags</h2>
             <div className="flex flex-wrap gap-2">
@@ -192,7 +204,7 @@ export default function PreviewGig() {
         )}
 
         {/* Sample Work */}
-        {formData.sampleWork.length > 0 && (
+        {formData.sampleWork?.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-800">Sample Work</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -214,7 +226,7 @@ export default function PreviewGig() {
         )}
 
         {/* FAQs */}
-        {formData.faqs.length > 0 && (
+        {formData.faqs?.length > 0 && (
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold text-gray-800">FAQs</h2>
             {formData.faqs.map((faq, index) => (

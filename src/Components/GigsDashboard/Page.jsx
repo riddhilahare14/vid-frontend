@@ -19,6 +19,7 @@ import {
   Video,
 } from "lucide-react";
 import axiosInstance from "../../utils/axios";
+import CreateGigForm from "./GigForm";
 
 export default function GigDashboard() {
   const [activeTab, setActiveTab] = useState("all");
@@ -33,6 +34,8 @@ export default function GigDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate(); // For redirecting after delete
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [gigToUpdate, setGigToUpdate] = useState(null);
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -80,6 +83,50 @@ export default function GigDashboard() {
     } catch (err) {
       console.error("Delete gig error:", err);
       setError(err.response?.data?.message || "Failed to delete gig.");
+    }
+  };
+
+  // Pause/Unpause a gig
+  const handlePauseGig = async (gigId) => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.patch(`/gig/${gigId}/pause`, {});
+      
+      // Update the gig's status locally to avoid a full refetch
+      setGigs(prevGigs => 
+        prevGigs.map(gig => 
+          gig.id === gigId 
+            ? { ...gig, status: gig.status === "PAUSED" ? "ACTIVE" : "PAUSED" } 
+            : gig
+        )
+      );
+      
+      // Show success message
+      alert(response?.data?.message || "Gig status updated successfully");
+      
+      // Refresh data to ensure everything is up to date
+      fetchDashboardData();
+    } catch (err) {
+      console.error("Error pausing/unpausing gig:", err);
+      alert("Failed to update gig status. " + (err.response?.data?.message || "Please try again."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Update a gig
+  const handleUpdateGig = (gig) => {
+    navigate(`/update-gig/${gig.id}`);
+  };
+
+  const handleUpdateSubmit = async (updatedData) => {
+    try {
+      await axiosInstance.put(`/gig/${gigToUpdate.id}`, updatedData);
+      setShowUpdateModal(false);
+      setGigToUpdate(null);
+      fetchDashboardData();
+    } catch (err) {
+      alert("Failed to update gig");
     }
   };
 
@@ -347,17 +394,18 @@ export default function GigDashboard() {
                         <span className="text-xl font-bold text-gray-900">${gig.pricing[0]?.price || 0}</span>
                       </p>
                       <div className="flex space-x-1">
-                        <Link to={`/edit-gig/${gig.id}`}>
+                        <Link to={`/update-gig/${gig.id}`}>
                           <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
                             <Edit className="w-5 h-5 text-gray-500" />
                           </button>
                         </Link>
-                        <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                          {gig.status === "ACTIVE" ? (
-                            <Pause className="w-5 h-5 text-gray-500" />
-                          ) : (
-                            <Play className="w-5 h-5 text-gray-500" />
-                          )}
+                        <button
+                          onClick={() => handlePauseGig(gig.id)}
+                          className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${
+                            gig.status === "PAUSED" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
+                          }`}
+                        >
+                          {gig.status === "PAUSED" ? "Unpause" : "Pause"}
                         </button>
                         <button
                           onClick={() => handleDeleteGig(gig.id, gig.status === "DRAFT")}
@@ -459,19 +507,20 @@ export default function GigDashboard() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex space-x-2">
-                            <Link to={`/edit-gig/${gig.id}`}>
+                            <Link to={`/update-gig/${gig.id}`}>
                               <button className="text-indigo-600 hover:text-indigo-900 font-medium">
                                 Edit
                               </button>
                             </Link>
                             <button
+                              onClick={() => handlePauseGig(gig.id)}
                               className={`${
-                                gig.status === "ACTIVE"
-                                  ? "text-gray-600 hover:text-gray-900"
-                                  : "text-green-600 hover:text-green-900"
+                                gig.status === "PAUSED"
+                                  ? "text-green-600 hover:text-green-900"
+                                  : "text-gray-600 hover:text-gray-900"
                               } font-medium`}
                             >
-                              {gig.status === "ACTIVE" ? "Pause" : "Activate"}
+                              {gig.status === "PAUSED" ? "Unpause" : "Pause"}
                             </button>
                             <button
                               onClick={() => handleDeleteGig(gig.id, gig.status === "DRAFT")}
@@ -510,6 +559,12 @@ export default function GigDashboard() {
               </button>
             </div>
           </div>
+        )}
+
+        {showUpdateModal && (
+          <Modal onClose={() => setShowUpdateModal(false)}>
+            <CreateGigForm initialValues={gigToUpdate} onSubmit={handleUpdateSubmit} isUpdate />
+          </Modal>
         )}
       </div>
     </div>
