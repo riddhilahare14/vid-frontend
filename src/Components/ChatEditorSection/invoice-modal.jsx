@@ -1,8 +1,10 @@
+"use client"
+
 import { useState } from "react"
-import { X, FileText, Check } from "lucide-react"
+import { X, FileText, Check, Download, Send } from "lucide-react"
 
 export default function InvoiceModal({ project, onClose }) {
-  const [invoiceStatus, setInvoiceStatus] = useState("draft") // draft, pending, paid
+  const [invoiceStatus, setInvoiceStatus] = useState("draft")
 
   const totalHours = project.tasks.reduce((sum, task) => sum + task.hours, 0)
   const totalCost = project.tasks.reduce((sum, task) => sum + task.cost, 0)
@@ -11,121 +13,180 @@ export default function InvoiceModal({ project, onClose }) {
 
   const handleSendInvoice = () => {
     setInvoiceStatus("pending")
-    // In a real app, this would send the invoice to the client
     setTimeout(() => {
       setInvoiceStatus("paid")
     }, 2000)
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-gray-800 rounded-lg w-full max-w-2xl overflow-hidden shadow-xl transform transition-all">
-        <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          <h3 className="text-lg font-medium flex items-center">
-            <FileText className="w-5 h-5 mr-2 text-blue-400" />
-            Generate Invoice
-          </h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-300 transition-colors">
-            <X className="w-5 h-5" />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700">
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">Invoice Generator</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400">Create professional invoices</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          >
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        <div className="p-6">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h2 className="text-xl font-bold">{project.name}</h2>
-              <p className="text-gray-400 text-sm">Invoice #{project.id.replace("proj-", "INV-")}</p>
-              <p className="text-gray-400 text-sm">Date: {new Date().toLocaleDateString()}</p>
+        <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+          <div className="p-8">
+            {/* Invoice Header */}
+            <div className="flex justify-between items-start mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">{project.name}</h2>
+                <div className="space-y-1 text-slate-600 dark:text-slate-400">
+                  <p className="font-medium">Invoice #{project.id.replace("proj-", "INV-")}</p>
+                  <p>Date: {new Date().toLocaleDateString()}</p>
+                  <p>Due: {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="bg-gradient-to-br from-blue-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                  <h3 className="font-bold text-lg mb-1">Freelancer Studio</h3>
+                  <div className="text-sm opacity-90">
+                    <p>123 Creative Street</p>
+                    <p>Design City, DC 12345</p>
+                    <p>hello@freelancer.studio</p>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="text-right">
-              <h3 className="font-medium">Vidlancing</h3>
-              <p className="text-gray-400 text-sm">123 Editor Street</p>
-              <p className="text-gray-400 text-sm">Creative City, CC 12345</p>
-            </div>
-          </div>
 
-          <div className="border border-gray-700 rounded-lg overflow-hidden mb-6">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-700">
-                <tr>
-                  <th className="text-left p-3">Task</th>
-                  <th className="text-center p-3">Hours</th>
-                  <th className="text-right p-3">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {project.tasks.map((task) => (
-                  <tr key={task.id} className="border-t border-gray-700">
-                    <td className="p-3">{task.name}</td>
-                    <td className="p-3 text-center">{task.hours}</td>
-                    <td className="p-3 text-right">${task.cost.toFixed(2)}</td>
+            {/* Client Info */}
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-6 mb-8">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Bill To:</h4>
+              <div className="text-slate-600 dark:text-slate-400">
+                <p className="font-medium">
+                  {project.postedBy ? `${project.postedBy.firstname} ${project.postedBy.lastname}` : "Client Name"}
+                </p>
+                <p>Client Company</p>
+                <p>456 Business Ave</p>
+                <p>Commerce City, CC 54321</p>
+              </div>
+            </div>
+
+            {/* Invoice Table */}
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden mb-8 shadow-sm">
+              <table className="w-full">
+                <thead className="bg-slate-100 dark:bg-slate-700">
+                  <tr>
+                    <th className="text-left p-4 font-semibold text-slate-900 dark:text-slate-100">Description</th>
+                    <th className="text-center p-4 font-semibold text-slate-900 dark:text-slate-100">Hours</th>
+                    <th className="text-right p-4 font-semibold text-slate-900 dark:text-slate-100">Amount</th>
                   </tr>
-                ))}
-                <tr className="border-t border-gray-700 bg-gray-700/30">
-                  <td className="p-3 font-medium">Subtotal</td>
-                  <td className="p-3 text-center">{totalHours}</td>
-                  <td className="p-3 text-right">${totalCost.toFixed(2)}</td>
-                </tr>
-                <tr className="border-t border-gray-700">
-                  <td className="p-3">Platform Commission (10%)</td>
-                  <td className="p-3 text-center">-</td>
-                  <td className="p-3 text-right">${commission.toFixed(2)}</td>
-                </tr>
-                <tr className="border-t border-gray-700 bg-gray-700/50">
-                  <td className="p-3 font-bold">Total</td>
-                  <td className="p-3 text-center">-</td>
-                  <td className="p-3 text-right font-bold">${grandTotal.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {project.tasks.map((task, index) => (
+                    <tr key={task.id} className={index % 2 === 0 ? "bg-slate-50 dark:bg-slate-800/50" : ""}>
+                      <td className="p-4 text-slate-900 dark:text-slate-100">{task.name}</td>
+                      <td className="p-4 text-center text-slate-600 dark:text-slate-400">{task.hours}</td>
+                      <td className="p-4 text-right font-medium text-slate-900 dark:text-slate-100">
+                        ${task.cost.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
 
-          <div className="bg-gray-700/30 p-4 rounded-lg mb-6">
-            <h4 className="font-medium mb-2">Payment Details</h4>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-400">Payment Method:</p>
-                <p>Credit Card / PayPal</p>
-              </div>
-              <div>
-                <p className="text-gray-400">Due Date:</p>
-                <p>{new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
+                  {/* Subtotal */}
+                  <tr className="border-t border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700">
+                    <td className="p-4 font-semibold text-slate-900 dark:text-slate-100">Subtotal</td>
+                    <td className="p-4 text-center font-medium text-slate-600 dark:text-slate-400">{totalHours}</td>
+                    <td className="p-4 text-right font-semibold text-slate-900 dark:text-slate-100">
+                      ${totalCost.toFixed(2)}
+                    </td>
+                  </tr>
 
-          <div className="flex justify-between items-center">
-            <div className="flex items-center">
-              {invoiceStatus === "paid" && (
-                <div className="bg-green-900/30 text-green-500 px-4 py-2 rounded-lg flex items-center">
-                  <Check className="w-5 h-5 mr-2" />
-                  Payment Received
-                </div>
-              )}
-              {invoiceStatus === "pending" && (
-                <div className="bg-yellow-900/30 text-yellow-500 px-4 py-2 rounded-lg flex items-center">
-                  <div className="w-2 h-2 bg-yellow-500 rounded-full mr-2 animate-pulse"></div>
-                  Payment Pending
-                </div>
-              )}
+                  {/* Commission */}
+                  <tr>
+                    <td className="p-4 text-slate-600 dark:text-slate-400">Platform Commission (10%)</td>
+                    <td className="p-4 text-center text-slate-600 dark:text-slate-400">-</td>
+                    <td className="p-4 text-right text-slate-600 dark:text-slate-400">${commission.toFixed(2)}</td>
+                  </tr>
+
+                  {/* Total */}
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20">
+                    <td className="p-4 text-xl font-bold text-slate-900 dark:text-slate-100">Total</td>
+                    <td className="p-4 text-center text-slate-600 dark:text-slate-400">-</td>
+                    <td className="p-4 text-right text-2xl font-bold text-slate-900 dark:text-slate-100">
+                      ${grandTotal.toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <div className="flex space-x-3">
-              <button
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-lg text-sm transition-colors"
-              >
-                Close
-              </button>
+            {/* Payment Details */}
+            <div className="bg-slate-50 dark:bg-slate-700/50 rounded-xl p-6 mb-8">
+              <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Payment Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Payment Methods</p>
+                  <p className="text-slate-900 dark:text-slate-100">Credit Card, PayPal, Bank Transfer</p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Payment Terms</p>
+                  <p className="text-slate-900 dark:text-slate-100">Net 14 days</p>
+                </div>
+              </div>
+            </div>
 
-              {invoiceStatus === "draft" && (
+            {/* Status and Actions */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center">
+                {invoiceStatus === "paid" && (
+                  <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-4 py-3 rounded-xl flex items-center shadow-sm">
+                    <Check className="w-5 h-5 mr-2" />
+                    <span className="font-medium">Payment Received</span>
+                  </div>
+                )}
+                {invoiceStatus === "pending" && (
+                  <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-4 py-3 rounded-xl flex items-center shadow-sm">
+                    <div className="w-2 h-2 bg-amber-500 rounded-full mr-3 animate-pulse"></div>
+                    <span className="font-medium">Payment Pending</span>
+                  </div>
+                )}
+                {invoiceStatus === "draft" && (
+                  <div className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-3 rounded-xl flex items-center shadow-sm">
+                    <FileText className="w-5 h-5 mr-2" />
+                    <span className="font-medium">Draft Invoice</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex space-x-3">
                 <button
-                  onClick={handleSendInvoice}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm transition-colors"
+                  onClick={onClose}
+                  className="px-6 py-3 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-colors"
                 >
-                  Send Invoice
+                  Close
                 </button>
-              )}
+
+                <button className="px-6 py-3 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-colors flex items-center space-x-2">
+                  <Download className="w-4 h-4" />
+                  <span>Download PDF</span>
+                </button>
+
+                {invoiceStatus === "draft" && (
+                  <button
+                    onClick={handleSendInvoice}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-xl font-medium transition-all duration-200 shadow-lg hover:shadow-xl flex items-center space-x-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    <span>Send Invoice</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -133,4 +194,3 @@ export default function InvoiceModal({ project, onClose }) {
     </div>
   )
 }
-

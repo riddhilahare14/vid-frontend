@@ -1,3 +1,5 @@
+"use client"
+
 import { createContext, useContext, useState, useEffect } from "react"
 
 const ThemeContext = createContext({
@@ -30,4 +32,3 @@ export const ThemeProvider = ({ children }) => {
 }
 
 export const useTheme = () => useContext(ThemeContext)
-

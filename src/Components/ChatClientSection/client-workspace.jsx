@@ -1,12 +1,9 @@
+
 import { useState, useEffect } from "react"
-import { Sidebar } from "./sidebar"
-import { ChatSection } from "./chat-section"
-import { FilesSection } from "./files-section"
-import { TasksSection } from "./tasks-section"
-import { FeedbackSection } from "./feedback-section"
-import { TimelineSection } from "./timeline-section"
-import { SummarySection } from "./summary-section"
-import { Tabs } from "./ui/tabs"
+import { TopNavigation } from "./top-navigation"
+import { ProjectSidebar } from "./sidebar"
+import { MainPanel } from "./main-panel"
+import { ChatTimeline } from "./chat-timeline"
 import axiosInstance from "../../utils/axios"
 
 // Utility functions
@@ -36,24 +33,17 @@ export function formatBytes(bytes) {
   const k = 1024
   const sizes = ["Bytes", "KB", "MB", "GB"]
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-}
-
-export function formatCurrency(amount) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(amount)
+  return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
 
 export function getStatusClasses(status) {
   switch (status.toLowerCase()) {
     case "completed":
-      return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+      return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400"
     case "in progress":
       return "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
-    case "review":
-      return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+    case "needs review":
+      return "bg-amber-100 text-amber-800 dark:bg-amber-900/20 dark:text-amber-400"
     default:
       return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
   }
@@ -62,18 +52,14 @@ export function getStatusClasses(status) {
 export function getStatusColor(status) {
   switch (status.toLowerCase()) {
     case "completed":
-      return "bg-green-500"
+      return "bg-emerald-500"
     case "in progress":
       return "bg-blue-500"
-    case "review":
-      return "bg-yellow-500"
+    case "needs review":
+      return "bg-amber-500"
     default:
       return "bg-gray-500"
   }
-}
-
-export function cn(...inputs) {
-  return inputs.filter(Boolean).join(" ")
 }
 
 export function ClientWorkspace() {
@@ -82,7 +68,8 @@ export function ClientWorkspace() {
   const [completedJobs, setCompletedJobs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [activeRightTab, setActiveRightTab] = useState("files")
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [projectFilter, setProjectFilter] = useState("all")
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -90,18 +77,13 @@ export function ClientWorkspace() {
         setLoading(true)
         const response = await axiosInstance.get("/jobs")
         const jobs = response.data.data.jobs || []
-        
-        // Split jobs into active and completed
-        const active = jobs.filter(job => 
-          job.status !== "COMPLETED" && 
-          job.freelancer // Only include jobs that have an assigned editor
-        )
-        const completed = jobs.filter(job => job.status === "COMPLETED")
-        
+
+        const active = jobs.filter((job) => job.status !== "COMPLETED" && job.freelancer)
+        const completed = jobs.filter((job) => job.status === "COMPLETED")
+
         setActiveJobs(active)
         setCompletedJobs(completed)
-        
-        // Select the first active job by default if available
+
         if (active.length > 0 && !selectedJob) {
           setSelectedJob(active[0])
         }
@@ -121,70 +103,71 @@ export function ClientWorkspace() {
   }
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen">Loading...</div>
+    return (
+      <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading workspace...</p>
+        </div>
+      </div>
+    )
   }
 
   if (error) {
-    return <div className="flex items-center justify-center h-screen text-red-500">{error}</div>
+    return (
+      <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900">
+        <div className="text-center">
+          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
+          <p className="text-gray-600 dark:text-gray-400">{error}</p>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-      {/* Left Sidebar */}
-      <Sidebar 
-        onSelectJob={handleJobSelect} 
-        selectedJobId={selectedJob?.id} 
-        activeJobs={activeJobs} 
-        completedJobs={completedJobs} 
-      />
+    <div className="h-screen flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
+      {/* Top Navigation */}
+     
 
-      {selectedJob ? (
-        <>
-          {/* Main Chat Section */}
-          <main className="flex-1 overflow-auto">
-            <div className="container h-full mx-auto py-6 px-4">
-              <header className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{selectedJob.title}</h1>
-                <div className="flex items-center mt-2">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusClasses(selectedJob.status)}`}>
-                    {selectedJob.status}
-                  </span>
-                  <span className="mx-2 text-gray-500 dark:text-gray-400">•</span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">
-                    Posted {formatDistanceToNow(selectedJob.createdAt)}
-                  </span>
-                </div>
-              </header>
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        <ProjectSidebar
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          activeJobs={activeJobs}
+          completedJobs={completedJobs}
+          selectedJobId={selectedJob?.id}
+          onSelectJob={handleJobSelect}
+          filter={projectFilter}
+          onFilterChange={setProjectFilter}
+        />
 
-              <div className="h-[calc(100%-4rem)]">
-                <ChatSection job={selectedJob} />
+        {/* Main Content */}
+        <div className="flex flex-1 min-w-0 overflow-hidden">
+          {selectedJob ? (
+            <>
+              {/* Center Panel - Fixed */}
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <MainPanel job={selectedJob} />
+              </div>
+
+              {/* Right Sidebar - Chat & Timeline - Fixed */}
+              <div className="w-96 flex-shrink-0 overflow-hidden">
+                <ChatTimeline job={selectedJob} />
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+              <div className="text-center">
+                <div className="text-gray-400 text-6xl mb-4">📁</div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No project selected</h2>
+                <p className="text-gray-600 dark:text-gray-400">Choose a project from the sidebar to get started</p>
               </div>
             </div>
-          </main>
-
-          {/* Right Panel */}
-          <div className="w-80 border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-            <Tabs
-              tabs={[
-                { id: "files", label: "Files", content: <FilesSection job={selectedJob} /> },
-                { id: "tasks", label: "Tasks", content: <TasksSection job={selectedJob} /> },
-                { id: "timeline", label: "Timeline", content: <TimelineSection job={selectedJob} /> },
-                { id: "feedback", label: "Feedback", content: <FeedbackSection job={selectedJob} /> },
-                { id: "summary", label: "Summary", content: <SummarySection job={selectedJob} /> },
-              ]}
-              activeTab={activeRightTab}
-              onChange={setActiveRightTab}
-            />
-          </div>
-        </>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-xl font-medium text-gray-900 dark:text-white">No job selected</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a job from the sidebar to view details</p>
-          </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }

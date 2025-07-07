@@ -1,66 +1,21 @@
+"use client"
+
 import { useState, useRef } from "react"
-import { CheckCircle, Clock, AlertCircle, MoreVertical, Package, Clapperboard, FileCheck, File, Upload } from "lucide-react"
+import { File, Upload, MoreVertical, Star, Filter, Search, Grid, ListIcon } from "lucide-react"
 
 export default function RightPanel({ currentProject, setCurrentProject, isCollapsed }) {
-  const [activeTab, setActiveTab] = useState("tasks")
   const [fileCategory, setFileCategory] = useState("all")
+  const [viewMode, setViewMode] = useState("grid")
+  const [searchQuery, setSearchQuery] = useState("")
   const fileInputRef = useRef(null)
 
-  // File categories
   const fileCategories = [
-    { id: "all", label: "All" },
-    { id: "raw", label: "Raw" },
-    { id: "final", label: "Final" },
-    { id: "refs", label: "Refs" },
+    { id: "all", label: "All", count: 0 },
+    { id: "raw", label: "Raw", count: 0 },
+    { id: "final", label: "Final", count: 0 },
+    { id: "refs", label: "References", count: 0 },
   ]
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "Completed":
-        return <CheckCircle className="w-4 h-4 text-green-500" />
-      case "In Progress":
-        return <Clock className="w-4 h-4 text-blue-500" />
-      default:
-        return <AlertCircle className="w-4 h-4 text-gray-400" />
-    }
-  }
-
-  const handleDragStart = (e, taskId) => {
-    e.dataTransfer.setData("taskId", taskId)
-  }
-
-  const handleDrop = (e, newStatus) => {
-    e.preventDefault()
-    const taskId = e.dataTransfer.getData("taskId")
-
-    const updatedTasks = currentProject.tasks.map((task) =>
-      task.id === taskId ? { ...task, status: newStatus } : task,
-    )
-
-    setCurrentProject({
-      ...currentProject,
-      tasks: updatedTasks,
-    })
-  }
-
-  const handleDragOver = (e) => {
-    e.preventDefault()
-  }
-
-  const getMilestoneIcon = (iconName) => {
-    switch (iconName) {
-      case "FileCheck":
-        return <FileCheck className="w-5 h-5" />
-      case "Clapperboard":
-        return <Clapperboard className="w-5 h-5" />
-      case "Package":
-        return <Package className="w-5 h-5" />
-      default:
-        return <CheckCircle className="w-5 h-5" />
-    }
-  }
-
-  // Handle file upload
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files)
     const newFiles = files.map((file) => ({
@@ -69,8 +24,10 @@ export default function RightPanel({ currentProject, setCurrentProject, isCollap
       size: file.size,
       type: file.type,
       url: URL.createObjectURL(file),
-      category: fileCategory === "all" ? "raw" : fileCategory, // default to raw if all
+      category: fileCategory === "all" ? "raw" : fileCategory,
       uploadedAt: new Date().toISOString(),
+      status: "Ready for Review",
+      starred: false,
       versions: [
         {
           version: 1,
@@ -85,307 +42,262 @@ export default function RightPanel({ currentProject, setCurrentProject, isCollap
     })
   }
 
-  // Filter files by category
-  const filteredFiles = (currentProject.files || []).filter(
-    (file) => fileCategory === "all" || file.category === fileCategory
-  )
+  const filteredFiles = (currentProject.files || [])
+    .filter((file) => fileCategory === "all" || file.category === fileCategory)
+    .filter((file) => file.name.toLowerCase().includes(searchQuery.toLowerCase()))
+
+  // Update category counts
+  fileCategories.forEach((cat) => {
+    if (cat.id === "all") {
+      cat.count = currentProject.files?.length || 0
+    } else {
+      cat.count = currentProject.files?.filter((file) => file.category === cat.id).length || 0
+    }
+  })
+
+  const getFileIcon = (type) => {
+    if (type.startsWith("image/")) {
+      return "🖼️"
+    } else if (type.startsWith("video/")) {
+      return "🎥"
+    } else if (type.startsWith("audio/")) {
+      return "🎵"
+    } else if (type.includes("pdf")) {
+      return "📄"
+    } else {
+      return "📁"
+    }
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Approved":
+        return "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+      case "Ready for Review":
+        return "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+      case "In Review":
+        return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+      default:
+        return "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400"
+    }
+  }
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
 
   if (isCollapsed) return null
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 flex flex-col h-full transition-colors duration-200">
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
-        <button
-          className={`flex-1 px-4 py-3 font-medium text-sm ${
-            activeTab === "tasks"
-              ? "text-blue-400 border-b-2 border-blue-400"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-          }`}
-          onClick={() => setActiveTab("tasks")}
-        >
-          Tasks
-        </button>
-        <button
-          className={`flex-1 px-4 py-3 font-medium text-sm ${
-            activeTab === "progress"
-              ? "text-blue-400 border-b-2 border-blue-400"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-          }`}
-          onClick={() => setActiveTab("progress")}
-        >
-          Progress
-        </button>
-        <button
-          className={`flex-1 px-4 py-3 font-medium text-sm ${
-            activeTab === "files"
-              ? "text-blue-400 border-b-2 border-blue-400"
-              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-          }`}
-          onClick={() => setActiveTab("files")}
-        >
-          Files
-        </button>
+    <div className="h-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-700 flex flex-col">
+      {/* Header */}
+      <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Files</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">Manage project assets and deliverables</p>
+          </div>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            >
+              {viewMode === "grid" ? <ListIcon className="w-4 h-4" /> : <Grid className="w-4 h-4" />}
+            </button>
+            <button className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+              <Filter className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search files..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex space-x-1 bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+          {fileCategories.map((cat) => (
+            <button
+              key={cat.id}
+              className={`flex-1 px-3 py-2 text-xs font-medium rounded-md transition-colors ${
+                fileCategory === cat.id
+                  ? "bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              }`}
+              onClick={() => setFileCategory(cat.id)}
+            >
+              {cat.label} ({cat.count})
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Files Tab */}
-      {activeTab === "files" && (
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex items-center gap-2 mb-4">
-            {fileCategories.map((cat) => (
-              <button
-                key={cat.id}
-                className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                  fileCategory === cat.id
-                    ? "bg-blue-100 text-blue-700 border-blue-400"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600"
-                }`}
-                onClick={() => setFileCategory(cat.id)}
-              >
-                {cat.label}
-              </button>
-            ))}
-            <button
-              className="ml-auto flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 transition-colors"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <Upload className="w-4 h-4 mr-1" /> Upload
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-              className="hidden"
-              multiple
-            />
+      {/* Upload Area */}
+      <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+        <div
+          className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 text-center hover:border-blue-400 dark:hover:border-blue-500 transition-colors cursor-pointer group"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-3 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+            <Upload className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           </div>
-          <div className="space-y-3">
-            {filteredFiles.length === 0 && (
-              <div className="text-center text-gray-400 py-8">No files uploaded yet.</div>
-            )}
+          <p className="font-medium text-slate-900 dark:text-slate-100 mb-1">Upload Files</p>
+          <p className="text-sm text-slate-600 dark:text-slate-400">Drag and drop or click to browse</p>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+            multiple
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+          />
+        </div>
+      </div>
+
+      {/* Files List */}
+      <div className="flex-1 overflow-y-auto p-6">
+        {filteredFiles.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-slate-500 dark:text-slate-400">
+            <File className="w-12 h-12 mb-4 opacity-50" />
+            <p className="font-medium mb-1">{searchQuery ? "No files found" : "No files uploaded"}</p>
+            <p className="text-sm text-center">
+              {searchQuery ? "Try adjusting your search" : "Upload files to get started"}
+            </p>
+          </div>
+        ) : (
+          <div className={viewMode === "grid" ? "grid grid-cols-1 gap-4" : "space-y-3"}>
             {filteredFiles.map((file) => (
-              <div key={file.id} className="bg-white dark:bg-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <File className="w-5 h-5 text-blue-400" />
-                    <span className="font-medium text-sm">{file.name}</span>
-                    <span className="text-xs text-gray-400 ml-2">{file.category}</span>
-                  </div>
-                  <a
-                    href={file.url}
-                    download={file.name}
-                    className="text-blue-500 hover:underline text-xs"
-                  >
-                    Download
-                  </a>
-                </div>
-                {/* Version history */}
-                {file.versions && file.versions.length > 1 && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Versions:
-                    {file.versions.map((ver, idx) => (
-                      <a
-                        key={idx}
-                        href={ver.fileUrl}
-                        download={`${file.name}.v${ver.version}`}
-                        className="ml-2 underline text-blue-400"
-                      >
-                        v{ver.version}
-                      </a>
-                    ))}
-                  </div>
+              <div
+                key={file.id}
+                className={`bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-md transition-all duration-200 group ${
+                  viewMode === "grid" ? "p-4" : "p-3"
+                }`}
+              >
+                {viewMode === "grid" ? (
+                  <>
+                    {/* Grid View */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center space-x-3">
+                        {file.type.startsWith("image/") ? (
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-200 dark:bg-slate-600">
+                            <img
+                              src={file.url || "/placeholder.svg"}
+                              alt={file.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-xl">
+                            {getFileIcon(file.type)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-slate-900 dark:text-slate-100 truncate text-sm">
+                            {file.name}
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{formatFileSize(file.size)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="p-1 text-slate-400 hover:text-amber-500 transition-colors">
+                          <Star className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(file.status)}`}>
+                        {file.status || "Ready for Review"}
+                      </span>
+                      <div className="flex items-center space-x-2">
+                        {file.versions && file.versions.length > 1 && (
+                          <span className="text-xs text-slate-500 dark:text-slate-400">v{file.versions.length}</span>
+                        )}
+                        <a
+                          href={file.url}
+                          download={file.name}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                        >
+                          Download
+                        </a>
+                      </div>
+                    </div>
+
+                    {file.versions && file.versions.length > 1 && (
+                      <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Version History:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {file.versions.map((version, idx) => (
+                            <a
+                              key={idx}
+                              href={version.fileUrl}
+                              download={`${file.name}.v${version.version}`}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline px-2 py-1 bg-blue-50 dark:bg-blue-900/20 rounded"
+                            >
+                              v{version.version}
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {/* List View */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="text-lg">{getFileIcon(file.type)}</div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-slate-900 dark:text-slate-100 truncate text-sm">
+                            {file.name}
+                          </h4>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                              {formatFileSize(file.size)}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(file.status)}`}
+                            >
+                              {file.status || "Ready for Review"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <a
+                          href={file.url}
+                          download={file.name}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                        >
+                          Download
+                        </a>
+                        <button className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             ))}
           </div>
-        </div>
-      )}
-
-      {activeTab === "tasks" ? (
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-1 gap-4">
-            {/* Pending Tasks */}
-            <div
-              className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3"
-              onDrop={(e) => handleDrop(e, "Pending")}
-              onDragOver={handleDragOver}
-            >
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                <AlertCircle className="w-4 h-4 mr-2 text-gray-400" />
-                Pending
-              </h3>
-              <div className="space-y-2">
-                {currentProject.tasks
-                  .filter((task) => task.status === "Pending")
-                  .map((task) => (
-                    <div
-                      key={task.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-move hover:shadow-md hover:shadow-blue-900/20 transition-all border border-gray-200 dark:border-gray-700"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task.id)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium">{task.name}</h4>
-                        <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span>
-                          ${task.cost} • {task.hours}h
-                        </span>
-                        <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* In Progress Tasks */}
-            <div
-              className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3"
-              onDrop={(e) => handleDrop(e, "In Progress")}
-              onDragOver={handleDragOver}
-            >
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                <Clock className="w-4 h-4 mr-2 text-blue-500" />
-                In Progress
-              </h3>
-              <div className="space-y-2">
-                {currentProject.tasks
-                  .filter((task) => task.status === "In Progress")
-                  .map((task) => (
-                    <div
-                      key={task.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-move hover:shadow-md hover:shadow-blue-900/20 transition-all border border-gray-200 dark:border-gray-700"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task.id)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium">{task.name}</h4>
-                        <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        <span>
-                          ${task.cost} • {task.hours}h
-                        </span>
-                        <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Completed Tasks */}
-            <div
-              className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3"
-              onDrop={(e) => handleDrop(e, "Completed")}
-              onDragOver={handleDragOver}
-            >
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center">
-                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                Completed
-              </h3>
-              <div className="space-y-2">
-                {currentProject.tasks
-                  .filter((task) => task.status === "Completed")
-                  .map((task) => (
-                    <div
-                      key={task.id}
-                      className="bg-white dark:bg-gray-800 rounded-lg p-3 cursor-move hover:shadow-md hover:shadow-blue-900/20 transition-all border border-gray-200 dark:border-gray-700"
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, task.id)}
-                    >
-                      <div className="flex justify-between items-start">
-                        <h4 className="font-medium line-through text-gray-500">{task.name}</h4>
-                        <button className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
-                        <span>
-                          ${task.cost} • {task.hours}h
-                        </span>
-                        <span>Completed</span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* Progress Tracker */}
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Project Progress</h3>
-              <div className="text-lg font-bold text-blue-500 dark:text-blue-400">{currentProject.progress}%</div>
-            </div>
-
-            <div className="relative h-32 w-32 mx-auto">
-              <svg className="w-full h-full" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="none"
-                  stroke="#e5e7eb"
-                  strokeWidth="10"
-                  className="dark:stroke-gray-700"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  fill="none"
-                  stroke="url(#blue-gradient)"
-                  strokeWidth="10"
-                  strokeDasharray={`${(2 * Math.PI * 40 * currentProject.progress) / 100} ${2 * Math.PI * 40 * (1 - currentProject.progress / 100)}`}
-                  strokeDashoffset={2 * Math.PI * 40 * 0.25}
-                  strokeLinecap="round"
-                />
-                <defs>
-                  <linearGradient id="blue-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#3B82F6" />
-                    <stop offset="100%" stopColor="#8B5CF6" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold">{currentProject.progress}%</span>
-              </div>
-            </div>
-
-            {/* Milestone Badges */}
-            <div className="mt-6">
-              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-3">Milestones</h4>
-              <div className="flex justify-between">
-                {currentProject.milestones.map((milestone, index) => (
-                  <div key={milestone.id} className="flex flex-col items-center">
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        milestone.completed
-                          ? "bg-blue-100 dark:bg-blue-500/20 text-blue-500 dark:text-blue-400"
-                          : "bg-gray-100 dark:bg-gray-700 text-gray-500"
-                      } ${milestone.completed ? "animate-pulse" : ""}`}
-                    >
-                      {getMilestoneIcon(milestone.icon)}
-                    </div>
-                    <span className="text-xs mt-1 text-center max-w-[60px]">{milestone.name}</span>
-                    {index < currentProject.milestones.length - 1 && (
-                      <div className="absolute w-8 h-0.5 bg-gray-200 dark:bg-gray-700 translate-x-[60px]"></div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
-

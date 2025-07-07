@@ -1,92 +1,44 @@
-"use client"
+import * as React from "react"
+import * as TabsPrimitive from "@radix-ui/react-tabs"
+import { cn } from "../../../lib/utils"
 
-import { useState } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+const Tabs = TabsPrimitive.Root
 
-export function Tabs({ tabs, activeTab, onChange }) {
-  const [scrollIndex, setScrollIndex] = useState(0)
-  const visibleTabs = 3 // Number of tabs visible at once
+const TabsList = React.forwardRef(
+  ( { className, ...props }, ref ) => (
+    <TabsPrimitive.List
+      ref={ref}
+      className={cn(
+      "inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground",
+      className,
+    )}
+    {...props}
+  />
+))
+TabsList.displayName = TabsPrimitive.List.displayName
 
-  const nextTab = () => {
-    if (scrollIndex + visibleTabs < tabs.length) {
-      setScrollIndex(scrollIndex + 1)
-    }
-  }
+const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => (
+  <TabsPrimitive.Trigger
+    ref={ref}
+    className={cn(
+      "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
+      className,
+    )}
+    {...props}
+  />
+))
+TabsTrigger.displayName = TabsPrimitive.Trigger.displayName
 
-  const prevTab = () => {
-    if (scrollIndex > 0) {
-      setScrollIndex(scrollIndex - 1)
-    }
-  }
+const TabsContent = React.forwardRef(({ className, ...props }, ref) => (
+  <TabsPrimitive.Content
+    ref={ref}
+    className={cn(
+      "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+      className,
+    )}
+    {...props}
+  />
+))
+TabsContent.displayName = TabsPrimitive.Content.displayName
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="relative flex items-center border-b border-gray-200 dark:border-gray-700">
-        {scrollIndex > 0 && (
-          <button
-            onClick={prevTab}
-            className="absolute left-0 z-10 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 bg-gradient-to-r from-white dark:from-gray-800"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        )}
-        
-        <div className="flex-1 flex justify-center">
-          {tabs.slice(scrollIndex, scrollIndex + visibleTabs).map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onChange(tab.id)}
-              className={`
-                flex-1 px-4 py-2 text-sm font-medium text-center
-                ${activeTab === tab.id
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                }
-              `}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {scrollIndex + visibleTabs < tabs.length && (
-          <button
-            onClick={nextTab}
-            className="absolute right-0 z-10 p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 bg-gradient-to-l from-white dark:from-gray-800"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      <div className="flex-1 overflow-y-auto">
-        {tabs.find((tab) => tab.id === activeTab)?.content}
-      </div>
-    </div>
-  )
-}
-
-function TabsList({ children }) {
-  return <div className="flex">{children}</div>
-}
-
-function TabsTrigger({ children, onClick, active }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
-        active
-          ? "border-b-2 border-indigo-600 text-indigo-600 dark:border-indigo-400 dark:text-indigo-400"
-          : "border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600"
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
-function TabsContent({ children }) {
-  return <div className="p-4">{children}</div>
-}
-
-export { TabsList, TabsTrigger, TabsContent }
+export { Tabs, TabsList, TabsTrigger, TabsContent }

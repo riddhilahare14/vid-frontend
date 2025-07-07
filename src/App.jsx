@@ -126,7 +126,7 @@ function NavbarPage() {
                 </>
               }
             />
-            <Route path="/hireeditor" element={<Home />} />
+            <Route path="/hireeditor" element={<GigMainPage />} />
             <Route path="/join" element={<JoinPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignupPage />} />
