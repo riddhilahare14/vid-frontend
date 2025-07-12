@@ -1,5 +1,5 @@
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   CreditCardIcon,
   DevicePhoneMobileIcon,
@@ -13,6 +13,17 @@ import {
 
 
 export default function PaymentPage() {
+  const navigate = useNavigate();
+  const { gigId, pkgName } = useParams();
+
+  const location = useLocation();
+  const gig = location.state?.gig;
+  const pkg = location.state?.pkg;
+  const addSubtitles = location.state?.addSubtitles ?? false;
+  const expressDelivery = location.state?.expressDelivery ?? false;
+  console.log("Gig ID:", gigId);
+  console.log("Package Name:", pkgName);
+
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("card")
   const [promoCode, setPromoCode] = useState("")
   const [promoApplied, setPromoApplied] = useState(false)
@@ -26,12 +37,17 @@ export default function PaymentPage() {
     walletProvider: "",
   })
 
+  if (!gig || !pkg) {
+    // fallback to fetch if someone visits directly
+    return <div>Loading package...</div>;
+  }
+
   const orderDetails = {
-    planName: "Basic Reels Pack",
-    basePrice: 999,
+    planName: pkg.name,
+    basePrice: Number(pkg.price),
     addOns: {
-      subtitles: { selected: true, price: 200 },
-      expressDelivery: { selected: true, price: 500 },
+      subtitles: { selected: addSubtitles, price: 200 },
+      expressDelivery: { selected: expressDelivery, price: 500 },
     },
     taxes: 0,
     discount: promoApplied ? 100 : 0,

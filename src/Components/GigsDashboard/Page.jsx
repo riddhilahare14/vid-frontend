@@ -48,11 +48,13 @@ export default function GigDashboard() {
       ]);
 
       const gigsData = gigsResponse.data.data || [];
-      setGigs(gigsData);
+      // If gigsData is an object with a 'gigs' property, use that, else fallback to gigsData itself (for backward compatibility)
+      const gigsArray = Array.isArray(gigsData) ? gigsData : (gigsData.gigs || []);
+      setGigs(gigsArray);
 
       const pendingOrders = pendingOrdersResponse.data.data.length || 0;
-      const totalViews = gigsData.reduce((sum, gig) => sum + (gig.views || 0), 0);
-      const activeGigs = gigsData.filter(gig => gig.status === "ACTIVE").length;
+      const totalViews = gigsArray.reduce((sum, gig) => sum + (gig.views || 0), 0);
+      const activeGigs = gigsArray.filter(gig => gig.status === "ACTIVE").length;
       const monthlyEarnings = earningsResponse.data.data.reduce((sum, earning) => sum + (earning.amount || 0), 0);
 
       setStats({
@@ -343,80 +345,81 @@ export default function GigDashboard() {
               </div>
             ) : (
               filteredGigs.map(gig => (
-                <div
-                  key={gig.id}
-                  className="group bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 duration-300"
-                >
-                  <div className="relative">
-                    <img
-                      src={gig.sampleMedia[0]?.mediaUrl || "/placeholder.svg?height=180&width=320"}
-                      width={320}
-                      height={180}
-                      alt={gig.title}
-                      className="w-full h-48 object-cover transition-transform group-hover:scale-105 duration-300"
-                    />
-                    <div
-                      className={`absolute top-3 right-3 text-white text-xs px-3 py-1 rounded-full shadow-md ${
-                        gig.status === "ACTIVE"
-                          ? "bg-green-500"
-                          : gig.status === "PAUSED"
-                          ? "bg-amber-500"
-                          : gig.status === "DRAFT"
-                          ? "bg-gray-500"
-                          : "bg-gray-500"
-                      }`}
-                    >
-                      {gig.status.charAt(0) + gig.status.slice(1).toLowerCase()}
+                <Link key={gig.id} to={`/gigs-dashboard/gig-detail/${gig.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <div
+                    className="group bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1 duration-300"
+                  >
+                    <div className="relative">
+                      <img
+                        src={gig.sampleMedia[0]?.mediaUrl || "/placeholder.svg?height=180&width=320"}
+                        width={320}
+                        height={180}
+                        alt={gig.title}
+                        className="w-full h-48 object-cover transition-transform group-hover:scale-105 duration-300"
+                      />
+                      <div
+                        className={`absolute top-3 right-3 text-white text-xs px-3 py-1 rounded-full shadow-md ${
+                          gig.status === "ACTIVE"
+                            ? "bg-green-500"
+                            : gig.status === "PAUSED"
+                            ? "bg-amber-500"
+                            : gig.status === "DRAFT"
+                            ? "bg-gray-500"
+                            : "bg-gray-500"
+                        }`}
+                      >
+                        {gig.status.charAt(0) + gig.status.slice(1).toLowerCase()}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="p-6">
-                    <h3 className="font-bold text-gray-900 text-lg mb-2">{gig.title}</h3>
-                    <div className="flex items-center mb-4">
-                      <div className="flex items-center">
-                        <div className="flex">
-                          {[1, 2, 3, 4, 5].map(star => (
-                            <Star
-                              key={star}
-                              className={`w-4 h-4 ${star <= 4 ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
-                            />
-                          ))}
+                    <div className="p-6">
+                      <h3 className="font-bold text-gray-900 text-lg mb-2">{gig.title}</h3>
+                      <div className="flex items-center mb-4">
+                        <div className="flex items-center">
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map(star => (
+                              <Star
+                                key={star}
+                                className={`w-4 h-4 ${star <= 4 ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                              />
+                            ))}
+                          </div>
+                          <span className="text-sm text-gray-700 ml-2">4.9</span> {/* Placeholder */}
                         </div>
-                        <span className="text-sm text-gray-700 ml-2">4.9</span> {/* Placeholder */}
+                        <span className="text-gray-400 mx-2">•</span>
+                        <span className="text-sm text-gray-500">{gig.orders?.length || 0} Orders</span>
                       </div>
-                      <span className="text-gray-400 mx-2">•</span>
-                      <span className="text-sm text-gray-500">{gig.orders?.length || 0} Orders</span>
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-500">
-                        Starting at{" "}
-                        <span className="text-xl font-bold text-gray-900">${gig.pricing[0]?.price || 0}</span>
-                      </p>
-                      <div className="flex space-x-1">
-                        <Link to={`/update-gig/${gig.id}`}>
-                          <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-                            <Edit className="w-5 h-5 text-gray-500" />
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-gray-500">
+                          Starting at{" "}
+                          <span className="text-xl font-bold text-gray-900">${gig.pricing[0]?.price || 0}</span>
+                        </p>
+                        <div className="flex space-x-1">
+                          <Link to={`/update-gig/${gig.id}`} onClick={e => e.stopPropagation()}>
+                            <button className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+                              <Edit className="w-5 h-5 text-gray-500" />
+                            </button>
+                          </Link>
+                          <button
+                            onClick={e => { e.preventDefault(); handlePauseGig(gig.id); }}
+                            className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${
+                              gig.status === "PAUSED" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {gig.status === "PAUSED" ? "Unpause" : "Pause"}
                           </button>
-                        </Link>
-                        <button
-                          onClick={() => handlePauseGig(gig.id)}
-                          className={`p-2 rounded-full hover:bg-gray-100 transition-colors ${
-                            gig.status === "PAUSED" ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-600"
-                          }`}
-                        >
-                          {gig.status === "PAUSED" ? "Unpause" : "Pause"}
-                        </button>
-                        <button
-                          onClick={() => handleDeleteGig(gig.id, gig.status === "DRAFT")}
-                          className="p-2 rounded-full hover:bg-red-100 transition-colors"
-                        >
-                          <Trash className="w-5 h-5 text-red-500" />
-                        </button>
+                          <button
+                            onClick={e => { e.preventDefault(); handleDeleteGig(gig.id, gig.status === "DRAFT"); }}
+                            className="p-2 rounded-full hover:bg-red-100 transition-colors"
+                          >
+                            <Trash className="w-5 h-5 text-red-500" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -471,7 +474,9 @@ export default function GigDashboard() {
                               />
                             </div>
                             <div className="ml-4">
-                              <div className="text-sm font-medium text-gray-900">{gig.title}</div>
+                              <div className="text-sm font-medium text-gray-900">
+                                <Link to={`/gigs-dashboard/gig-detail/${gig.id}`}>{gig.title}</Link>
+                              </div>
                               <div className="text-xs text-gray-500">
                                 Updated {new Date(gig.updatedAt).toLocaleDateString()}
                               </div>

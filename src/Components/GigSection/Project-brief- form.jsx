@@ -1,4 +1,6 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
+import axiosInstance from "../../utils/axios"; 
 import {
   ChevronDownIcon,
   CloudArrowUpIcon,
@@ -13,6 +15,15 @@ import {
 } from "@heroicons/react/24/outline"
 
 export default function ProjectBriefForm() {
+  const { gigId, pkgName } = useParams();
+  const navigate = useNavigate();
+
+  const location = useLocation();
+  const gig = location.state?.gig;
+  const pkg = location.state?.pkg;
+  console.log("Gig ID:", gigId);
+  console.log("Package Name:", pkgName);
+
   const [formData, setFormData] = useState({
     projectTitle: "",
     videoType: "",
@@ -28,9 +39,17 @@ export default function ProjectBriefForm() {
   const [dragActive, setDragActive] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState([])
 
+  // const [gig, setGig] = useState(null);
+  // const [selectedPackage, setSelectedPackage] = useState(null);
+
+  if (!gig || !pkg) {
+    // fallback to fetch if someone visits directly
+    return <div>Loading package...</div>;
+  }
+
   const planDetails = {
-    name: "Basic Reels Pack",
-    price: "₹999",
+    name: pkg.name,
+    price: pkg.price,
     included: "3 Reels, 30 seconds each, Basic transitions, 3-day delivery",
     maxVideos: 3,
     maxDurationPerVideo: 30,
@@ -39,6 +58,13 @@ export default function ProjectBriefForm() {
   const exceedsLimits =
     formData.numberOfVideos > planDetails.maxVideos ||
     formData.totalDuration / formData.numberOfVideos > planDetails.maxDurationPerVideo
+
+  if (formData.numberOfVideos > planDetails.maxVideos) {
+    console.log("formData.numberOfVideos > planDetails.maxVideos");
+  }
+  if (formData.totalDuration / formData.numberOfVideos > planDetails.maxDurationPerVideo) {
+    console.log("formData.totalDuration / formData.numberOfVideos > planDetails.maxDurationPerVideo");
+  }
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -74,6 +100,14 @@ export default function ProjectBriefForm() {
 
   const removeFile = (index) => {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    navigate(
+      `/gig/${gigId}/${pkg.name}/project-brief/payment?aspectRatio=${encodeURIComponent(formData.aspectRatio)}`,
+      { state: { gig, pkg, addSubtitles: formData.addSubtitles, expressDelivery: formData.expressDelivery } }
+    );
   }
 
   return (
@@ -155,7 +189,7 @@ export default function ProjectBriefForm() {
                 <p className="text-gray-600 text-sm">Let clients know what you offer and why they should choose you.</p>
               </div>
 
-              <form className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Project Title */}
                 <div>
                   <label className="flex items-center text-sm font-medium text-gray-700 mb-2">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import {
   Film,
   Clock,
@@ -309,14 +310,15 @@ export default function VideoEditorDashboard() {
                         <Briefcase className={`h-5 w-5 ${darkMode ? "text-purple-400" : "text-purple-600"}`} />
                         Current Orders
                       </h2>
-                      <button
+                      <Link
+                        to="/create-gig"
                         className={`${
                           darkMode ? "bg-purple-500 hover:bg-purple-600" : "bg-purple-600 hover:bg-purple-700"
                         } text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors shadow-md`}
                       >
                         <Plus className="h-4 w-4" />
                         New Gig
-                      </button>
+                      </Link>
                     </div>
 
                     {currentOrders.length === 0 ? (

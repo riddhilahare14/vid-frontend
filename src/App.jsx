@@ -24,7 +24,7 @@ const ReviewPage = lazy(() => import('./Components/ReviewPage'));
 const ChatInterface = lazy(() => import('./Components/ChatPage/ChatInterface'));
 const PricingTiers = lazy(() => import('./Components/Profile/pricing-tiers'));
 const Home = lazy(() => import('./Components/ExploreEditor/Page'));
-const Dashboard = lazy(() => import('./Components/ClientDashboard/Dashboard'));
+const Dashboard = lazy(() => import('./Components/ClientDashboard/page'));
 const AboutUs = lazy(() => import('./Components/AboutUs/Aboutus'));
 const JobPage = lazy(() => import('./Components/JobPage/Jobpage'));
 const ProfilePage = lazy(() => import('./Components/Profile/profile-page'));
@@ -57,9 +57,12 @@ const Settings = lazy(() => import('./Components/Settings/settings'));
 const JobDescriptionPage = lazy(() => import('./Components/JobDescription/Page'));
 const GigMainPage = lazy(() => import('./Components/GigSection/Page'));
 const PreviewGig = lazy(() => import('./Components/GigsDashboard/PreviewGig'));
-const VideoEditingGig = lazy(() => import('./Components/GigSection/GigDescriptionPage')) 
+const VideoEditingGig = lazy(() => import('./Components/GigSection/GigDescriptionPage'));
+const ProjectBriefForm = lazy(() => import('./Components/GigSection/Project-brief- form'));
+const GigPaymentPage = lazy(() => import('./Components/GigSection/Payment-page'))
 const Shortlist = lazy(() => import('./Components/ClientDashboard/ShortList'));
 const JobApplicants = lazy(() => import('./Components/ClientDashboard/JobApplicants'));
+const GigDetailWrapper = lazy(() => import('./Components/EditorGigDetail/gigDetail'));
 
 function NavbarPage() {
   const user = useSelector((state) => state.user.user);
@@ -164,6 +167,8 @@ function NavbarPage() {
             <Route path="/gig" element={<GigMainPage />} />
             <Route path="/gig/preview" element={<PreviewGig />} />
             <Route path="/gig/:gigId" element={<VideoEditingGig />} />
+            <Route path="/gig/:gigId/:pkgName/project-brief" element={<ProjectBriefForm />} />
+            <Route path="/gig/:gigId/:pkgName/project-brief/payment" element={<GigPaymentPage />}/>
             <Route path='/jobs' element={<ClientJobs/>}></Route>
             <Route path="/jobs/:jobId/shortlist" element={<Shortlist />} />
             <Route path="/freelancerProfile/:freelancerId" element={<ProfilePage />} />
@@ -171,6 +176,7 @@ function NavbarPage() {
             <Route path="/editor/workspace" element={<ChatDashboard />} />
             <Route path="/client/workspace" element={<ChatClientDashboard />} />
             <Route path="/gigd" element={<GigDescriptionPage />} />
+            <Route path="/gigs-dashboard/gig-detail/:gigId" element={<GigDetailWrapper />} />
             <Route path="/workspace" element={
                user?.role === "FREELANCER"
                 ? <ChatDashboard />
@@ -178,6 +184,7 @@ function NavbarPage() {
             } />
 
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/client-dashboard/job-applicants/:jobId" element={<JobApplicants />} />
           </Routes>
         </Suspense>
         {showModal && <ProfileCompletionModal onClose={handleModalClose} />}

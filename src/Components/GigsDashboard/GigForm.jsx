@@ -307,7 +307,10 @@ export default function CreateGigForm({ isUpdate }) {
 
   // Handle form submission
   const handleSubmit = async (status) => {
-    if (status === "ACTIVE" && !validateForm()) return;
+    if (status === "ACTIVE" && !validateForm()) {
+      console.log("Validate form returned false")
+      return;
+    }
     if (status === "DRAFT" && !formData.title) {
       setErrors({ ...errors, title: "Title is required for draft" });
       return;
