@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
+
 import {
   Film,
   Clock,
@@ -28,6 +29,7 @@ import {
   Star,
   Sparkles,
   Flame,
+  X
 } from "lucide-react";
 import axiosInstance from "../../utils/axios"; // Adjust path
 import { useSelector } from "react-redux";
@@ -40,6 +42,7 @@ export default function VideoEditorDashboard() {
   const [currentOrders, setCurrentOrders] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [completedOrders, setCompletedOrders] = useState([]);
+  const [rejectedOrders, setRejectedOrders] = useState([]);
   const [currentJobs, setCurrentJobs] = useState([]);
   const [appliedJobs, setAppliedJobs] = useState([]);
   const [completedJobs, setCompletedJobs] = useState([]);
@@ -49,6 +52,8 @@ export default function VideoEditorDashboard() {
   const [earningsData, setEarningsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [expandedOrderId, setExpandedOrderId] = useState(null);
+
 
   const { user } = useSelector((state) => state.user);
 
@@ -66,6 +71,7 @@ export default function VideoEditorDashboard() {
           { name: "currentOrders", promise: axiosInstance.get("/orders/current") },
           { name: "pendingOrders", promise: axiosInstance.get("/orders/pending") },
           { name: "completedOrders", promise: axiosInstance.get("/orders/completed") },
+          { name: "rejectedOrders", promise: axiosInstance.get("/orders/rejected") },
           { name: "currentJobs", promise: axiosInstance.get("/jobs/current") },
           { name: "appliedJobs", promise: axiosInstance.get("/jobs/applied") },
           { name: "completedJobs", promise: axiosInstance.get("/jobs/completed") },
@@ -91,6 +97,7 @@ export default function VideoEditorDashboard() {
           currentOrders: [],
           pendingOrders: [],
           completedOrders: [],
+          rejectedOrders: [],
           currentJobs: [],
           appliedJobs: [],
           completedJobs: [],
@@ -117,6 +124,7 @@ export default function VideoEditorDashboard() {
         setCurrentOrders(data.currentOrders);
         setPendingOrders(data.pendingOrders);
         setCompletedOrders(data.completedOrders);
+        setRejectedOrders(data.rejectedOrders);
         setCurrentJobs(data.currentJobs);
         setAppliedJobs(data.appliedJobs);
         setCompletedJobs(data.completedJobs);
@@ -133,7 +141,7 @@ export default function VideoEditorDashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [activeTab]);
 
   useEffect(() => {
     const tabContent = document.getElementById("tab-content");
@@ -152,6 +160,69 @@ export default function VideoEditorDashboard() {
       return () => clearTimeout(timer);
     }
   }, [activeJobTab]);
+
+  const fetchOrders = async () => {
+    try {
+      const [currentRes, pendingRes, completedRes, rejectedRes] = await Promise.all([
+        axiosInstance.get("/orders/current"),
+        axiosInstance.get("/orders/pending"),
+        axiosInstance.get("/orders/completed"),
+        axiosInstance.get("/orders/rejected"),
+      ]);
+      console.log("fetchOrders results:", {
+        current: currentRes.data.data.length,
+        pending: pendingRes.data.data.length,
+        completed: completedRes.data.data.length,
+        rejected: rejectedRes.data.data.length,
+      });
+      setCurrentOrders(currentRes.data.data);
+      setPendingOrders(pendingRes.data.data);
+      setCompletedOrders(completedRes.data.data);
+      setRejectedOrders(rejectedRes.data.data);
+    } catch (error) {
+      console.error("Failed to fetch orders:", error);
+    }
+  };
+  
+  
+
+  const handleProceedToWork = async (order) => {
+    try {
+      if (order.status === "CURRENT") return;
+  
+      const response = await axiosInstance.patch(`/orders/${order.id}/status`, {
+        status: "CURRENT",
+      });
+  
+      if (response.data && response.data.data) {
+        setPendingOrders((prev) => prev.filter((o) => o.id !== order.id));
+        setCurrentOrders((prev) => [response.data.data, ...prev]);
+        setActiveTab("current");
+      }
+    } catch (err) {
+      console.error("Failed to proceed to work:", err);
+    }
+  };
+  
+  const handleDeclineOrder = async (order) => {
+    try {
+      if (order.status === "REJECTED") return;
+  
+      const response = await axiosInstance.patch(`/orders/${order.id}/status`, {
+        status: "REJECTED",
+      });
+  
+      if (response.data && response.data.data) {
+        setPendingOrders((prev) => prev.filter((o) => o.id !== order.id));
+        setRejectedOrders((prev) => [response.data.data, ...prev]);
+        setActiveTab("rejected");
+      }
+    } catch (err) {
+      console.error("Failed to reject order:", err);
+    }
+  };
+  
+  
 
   if (loading) {
     return (
@@ -300,6 +371,27 @@ export default function VideoEditorDashboard() {
                     ></span>
                   )}
                 </button>
+                <button
+                  onClick={() => setActiveTab("rejected")}
+                  className={`px-6 py-3 font-medium text-center relative transition-colors ${
+                    activeTab === "rejected"
+                      ? darkMode
+                        ? "text-purple-400"
+                        : "text-purple-600"
+                      : darkMode
+                        ? "text-gray-400 hover:text-gray-300"
+                        : "text-gray-500 hover:text-gray-700"
+                  }`}
+                >
+                  Rejected Orders
+                  {activeTab === "rejected" && (
+                    <span
+                      className={`absolute bottom-0 left-0 w-full h-0.5 ${
+                        darkMode ? "bg-purple-400" : "bg-purple-600"
+                      } transition-all duration-300`}
+                    ></span>
+                  )}
+                </button>
               </div>
 
               <div id="tab-content" className="transition-opacity duration-300">
@@ -427,41 +519,126 @@ export default function VideoEditorDashboard() {
                       <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No pending orders</p>
                     ) : (
                       pendingOrders.map((order) => (
-                        <div
-                          key={order.id}
-                          className={`flex items-center gap-3 p-4 rounded-xl ${
-                            darkMode ? "bg-gray-800/50 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
-                          } shadow-sm transition-all`}
-                        >
+                        <div key={order.id}>
                           <div
-                            className={`w-12 h-12 rounded-lg ${
-                              darkMode ? "bg-amber-900/30 text-amber-400" : "bg-amber-100 text-amber-600"
-                            } flex items-center justify-center flex-shrink-0`}
+                            className={`flex items-center gap-3 p-4 rounded-xl ${
+                              darkMode ? "bg-gray-800/50 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
+                            } shadow-sm transition-all`}
                           >
-                            <Calendar className="h-6 w-6" />
-                          </div>
-                          <div className="flex-grow min-w-0">
-                            <h3 className="font-medium truncate">{order.gig.title}</h3>
                             <div
-                              className={`flex items-center gap-2 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                              className={`w-12 h-12 rounded-lg ${
+                                darkMode ? "bg-amber-900/30 text-amber-400" : "bg-amber-100 text-amber-600"
+                              } flex items-center justify-center flex-shrink-0`}
                             >
-                              <span>Due: {new Date(order.deliveryDeadline).toLocaleDateString()}</span>
-                              <span className={`w-1 h-1 rounded-full ${darkMode ? "bg-gray-500" : "bg-gray-300"}`}></span>
-                              <span>{order.progress}% Complete</span>
+                              <Calendar className="h-6 w-6" />
                             </div>
+                            <div className="flex-grow min-w-0">
+                              <h3 className="font-medium truncate">{order.title}</h3>
+                              <p className={`text-sm truncate ${darkMode ? "text-gray-400" : "text-gray-600"}`}>
+                                {order.description}
+                              </p>
+                              <div
+                                className={`flex items-center gap-2 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
+                              >
+                                <span>Due: {new Date(order.deliveryDeadline).toLocaleDateString()}</span>
+                                <span className={`w-1 h-1 rounded-full ${darkMode ? "bg-gray-500" : "bg-gray-300"}`}></span>
+                                <span>{order.progress}% Complete</span>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() =>
+                                setExpandedOrderId(expandedOrderId === order.id ? null : order.id)
+                              }
+                              className={`flex-shrink-0 p-2 ${
+                                darkMode ? "text-purple-400 hover:bg-gray-700" : "text-purple-600 hover:bg-purple-50"
+                              } rounded-lg`}
+                            >
+                              <ChevronRight 
+                                className={`h-5 w-5 transform transition-transform duration-200 ${
+                                  expandedOrderId === order.id ? "rotate-90" : ""
+                                }`}
+                              />
+                            </button>
                           </div>
-                          <button
-                            className={`flex-shrink-0 p-2 ${
-                              darkMode ? "text-purple-400 hover:bg-gray-700" : "text-purple-600 hover:bg-purple-50"
-                            } rounded-lg`}
-                          >
-                            <ChevronRight className="h-5 w-5" />
-                          </button>
-                        </div>
+                          {expandedOrderId === order.id && (
+                            <div
+                              className={`mt-2 rounded-2xl p-4 shadow-sm border-l-4 ${
+                                darkMode
+                                  ? "border-purple-500 bg-gray-800 text-gray-100"
+                                  : "border-purple-600 bg-white text-gray-800"
+                              }`}
+                            >
+                              <h4 className="text-lg font-bold mb-3 flex items-center gap-2">
+                                <FileText className={`h-5 w-5 ${darkMode ? "text-purple-400" : "text-purple-600"}`} />
+                                Order Details
+                              </h4>
+
+                              <ul className="space-y-1 text-sm">
+                                <li><strong>Title:</strong> {order.title}</li>
+                                <li><strong>Video Type:</strong> {order.videoType}</li>
+                                <li><strong>Number of Videos:</strong> {order.numberOfVideos}</li>
+                                <li><strong>Total Duration:</strong> {order.totalDuration} sec</li>
+                                <li><strong>Description:</strong> {order.description}</li>
+                                <li><strong>Reference URL:</strong> {order.referenceUrl || "N/A"}</li>
+                                <li><strong>Aspect Ratio:</strong> {order.aspectRatio}</li>
+                                <li><strong>Add Subtitles:</strong> {order.addSubtitles ? "Yes" : "No"}</li>
+                                <li><strong>Express Delivery:</strong> {order.expressDelivery ? "Yes" : "No"}</li>
+                                {order.uploadedFiles && order.uploadedFiles.length > 0 && (
+                                  <li>
+                                    <strong>Uploaded Files:</strong>
+                                    <ul className="ml-4 list-disc">
+                                      {order.uploadedFiles.map((file, index) => (
+                                        <li key={index}>
+                                          {file.name} ({Math.round(file.size / 1024)} KB)
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </li>
+                                )}
+                              </ul>
+
+                              <div className="mt-4 flex flex-wrap gap-3">
+                                <button
+                                  onClick={() => {
+                                    handleProceedToWork(order)
+                                    setActiveTab("current")
+                                  }}
+                                  className={`flex items-center justify-center gap-2 px-4 py-2 w-40 rounded-lg transition shadow-sm whitespace-nowrap ${
+                                    darkMode
+                                      ? "bg-gradient-to-br from-purple-600 to-indigo-700 text-white hover:from-purple-700 hover:to-indigo-800"
+                                      : "bg-gradient-to-br from-purple-500 to-indigo-600 text-white hover:from-purple-600 hover:to-indigo-700"
+                                  }`}
+                                >
+                                  <Check className="h-4 w-4" />
+                                  Proceed to Work
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    handleDeclineOrder(order)
+                                    setActiveTab("rejected")
+                                  }}
+                                  className={`flex items-center justify-center gap-2 px-4 py-2 w-40 rounded-lg transition shadow-sm border whitespace-nowrap ${
+                                    darkMode
+                                      ? "bg-white text-purple-700 border-purple-700 hover:bg-gray-100"
+                                      : "bg-white text-purple-700 border-purple-700 hover:bg-purple-50"
+                                  }`}
+                                >
+                                  <X className="h-4 w-4" />
+                                  Decline Order
+                                </button>
+                              </div>
+
+                            </div>
+                          )}
+
+                        </div> 
                       ))
                     )}
                   </div>
                 )}
+
+
 
                 {activeTab === "completed" && (
                   <div className="space-y-4">
@@ -517,6 +694,62 @@ export default function VideoEditorDashboard() {
                     )}
                   </div>
                 )}
+
+                {activeTab === "rejected" && (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <X className={`h-5 w-5 ${darkMode ? "text-purple-400" : "text-purple-600"}`} />
+                        Rejected Orders
+                      </h2>
+                      <button
+                        className={`${
+                          darkMode
+                            ? "text-purple-400 text-sm font-medium hover:text-purple-300"
+                            : "text-purple-600 text-sm font-medium hover:text-purple-800"
+                        }`}
+                      >
+                        View All
+                      </button>
+                    </div>
+
+                    {rejectedOrders.length === 0 ? (
+                      <p className={`text-center ${darkMode ? "text-gray-400" : "text-gray-500"}`}>No rejected orders</p>
+                    ) : (
+                      rejectedOrders.map((order) => (
+                        <div
+                          key={order.id}
+                          className={`flex items-center gap-3 p-4 rounded-xl ${
+                            darkMode ? "bg-gray-800/50 hover:bg-gray-700" : "bg-white hover:bg-gray-50"
+                          } shadow-sm transition-all`}
+                        >
+                          <div
+                            className={`w-12 h-12 rounded-lg ${
+                              darkMode ? "bg-gray-700 text-purple-400" : "bg-purple-100 text-purple-600"
+                            } flex items-center justify-center flex-shrink-0`}
+                          >
+                            <FileText className="h-6 w-6" />
+                          </div>
+                          <div className="flex-grow min-w-0">
+                            <h3 className="font-medium truncate">{order.gig.title}</h3>
+                            <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              Client: {order.client.firstname} {order.client.lastname}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <span className={`text-sm font-medium ${darkMode ? "text-emerald-400" : "text-emerald-600"}`}>
+                              ${order.totalPrice.toFixed(2)}
+                            </span>
+                            <p className={`text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
+                              {new Date(order.completedAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
               </div>
             </div>
 
