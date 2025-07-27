@@ -102,13 +102,71 @@ export default function ProjectBriefForm() {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleSubmit = (e) => {
+  // const handleSubmit = (e) => {
+  //   e.preventDefault();
+
+  //   navigate(
+  //     `/gig/${gigId}/${pkg.name}/project-brief/payment?aspectRatio=${encodeURIComponent(formData.aspectRatio)}`,
+  //     { state: { gig, pkg, addSubtitles: formData.addSubtitles, expressDelivery: formData.expressDelivery } }
+  //   );
+  // }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate(
-      `/gig/${gigId}/${pkg.name}/project-brief/payment?aspectRatio=${encodeURIComponent(formData.aspectRatio)}`,
-      { state: { gig, pkg, addSubtitles: formData.addSubtitles, expressDelivery: formData.expressDelivery } }
-    );
-  }
+  
+    try {
+      // 1️⃣ Build payload
+      const payload = {
+        gigId: gig.id,
+        selectedPackage: pkg.name,
+        title: formData.projectTitle,
+        description: formData.description,
+        videoType: formData.videoType,
+        numberOfVideos: formData.numberOfVideos,
+        totalDuration: formData.totalDuration,
+        referenceUrl: formData.referenceUrl,
+        aspectRatio: formData.aspectRatio,
+        addSubtitles: formData.addSubtitles,
+        expressDelivery: formData.expressDelivery,
+        uploadedFiles: uploadedFiles.map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        })), // 👈 Or upload to S3 first and pass URLs
+        requirements: "Any specific requirements",
+        customDetails: {},
+      };
+  
+      // 2️⃣ Make API request
+      const res = await axiosInstance.post("/orders", payload);
+  
+      if (res.status === 201) {
+        const order = res.data.data;
+  
+        // ✅ 3️⃣ Navigate to payment page with order info
+        navigate(
+          `/gig/${gigId}/${pkg.name}/project-brief/payment`,
+          {
+            state: {
+              gig,
+              pkg,
+              orderId: order.id,
+              orderNumber: order.orderNumber,
+              totalPrice: order.totalPrice,
+              // addSubtitles: formData.addSubtitles,
+              // expressDelivery: formData.expressDelivery,
+            },
+          }
+        );
+      } else {
+        console.log("couldn't navigate");
+      }
+    } catch (error) {
+      console.error("Order creation failed:", error);
+      alert("Failed to create order. Please try again.");
+    }
+  };
+  
 
   return (
     <div className="min-h-screen bg-gray-50">

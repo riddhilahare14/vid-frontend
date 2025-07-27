@@ -26,18 +26,7 @@ export default function DashboardHeader({ activeSection, toggleSidebar }) {
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
-            </button>
-          </div>
-
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-sm font-medium">JD</span>
-          </div>
-        </div>
+       
       </div>
     </header>
   )

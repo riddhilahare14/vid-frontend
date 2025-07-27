@@ -19,8 +19,12 @@ export default function PaymentPage() {
   const location = useLocation();
   const gig = location.state?.gig;
   const pkg = location.state?.pkg;
+  const orderId = location.state?.orderId;
+  const orderNumber = location.state?.orderNumber;
+  const totalPrice = location.state?.totalPrice;
   const addSubtitles = location.state?.addSubtitles ?? false;
   const expressDelivery = location.state?.expressDelivery ?? false;
+  
   console.log("Gig ID:", gigId);
   console.log("Package Name:", pkgName);
 

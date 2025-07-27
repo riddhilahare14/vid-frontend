@@ -3,7 +3,7 @@ import EmojiPicker from "emoji-picker-react"
 import { formatDistanceToNow } from "./client-workspace"
 import socketClient from "../../utils/socket.js"
 import axiosInstance from "../../utils/axios.js"
-import { Send, Paperclip, MessageSquare, X, Reply, Smile } from 'lucide-react'
+import { Send, Paperclip, MessageSquare, X, Reply, Smile, Trash2 } from 'lucide-react'
 
 export function ChatSection({ job }) {
   const [messages, setMessages] = useState([])
@@ -17,7 +17,6 @@ export function ChatSection({ job }) {
   const fileInputRef = useRef(null)
   const typingTimeoutRef = useRef(null)
 
-  // Initialize socket and join job room
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
@@ -29,7 +28,6 @@ export function ChatSection({ job }) {
     socketClient.connect()
     socketClient.joinJobRoom(job.id)
 
-    // Fetch initial messages
     const fetchMessages = async () => {
       try {
         const response = await axiosInstance.get(`/messages/job/${job.id}`)
@@ -47,7 +45,6 @@ export function ChatSection({ job }) {
 
     fetchMessages()
 
-    // Socket event listeners
     socketClient.on("newMessage", (message) => {
       setMessages((prev) => {
         if (prev.some((m) => m.id === message.id)) {
@@ -56,6 +53,16 @@ export function ChatSection({ job }) {
         return [...prev, message]
       })
       setTimeout(scrollToBottom, 100)
+    })
+
+    socketClient.on("messageDeleted", (deletedMessageId) => {
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === deletedMessageId
+            ? { ...msg, isDeleted: true, content: "This message was deleted" }
+            : msg
+        )
+      )
     })
 
     socketClient.on("userTyping", ({ userId, name, isTyping }) => {
@@ -76,18 +83,17 @@ export function ChatSection({ job }) {
 
     return () => {
       socketClient.off("newMessage")
+      socketClient.off("messageDeleted")
       socketClient.off("userTyping")
       socketClient.off("error")
       socketClient.disconnect()
     }
   }, [job.id])
 
-  // Auto-scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }
 
-  // Handle typing
   useEffect(() => {
     if (newMessage) {
       socketClient.emitTyping(job.id, true)
@@ -165,6 +171,21 @@ export function ChatSection({ job }) {
     }
   }
 
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await axiosInstance.delete(`/messages/${messageId}`)
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === messageId ? { ...msg, isDeleted: true, content: "This message was deleted" } : msg
+        )
+      )
+      socketClient.emitMessageDeleted(job.id, messageId)
+    } catch (error) {
+      console.error("Error deleting message:", error)
+      setError("Failed to delete message.")
+    }
+  }
+
   const getReplyMessage = (replyId) => {
     return messages.find((msg) => msg.id === replyId)
   }
@@ -179,7 +200,6 @@ export function ChatSection({ job }) {
         </div>
       )}
 
-      {/* Chat Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-full overflow-hidden">
@@ -202,7 +222,7 @@ export function ChatSection({ job }) {
         </div>
       </div>
 
-      {/* Messages Container - Fixed Height with Scroll */}
+      {/* Messages Container */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0">
         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 space-y-4">
           {messages.length === 0 && !error && (
@@ -249,10 +269,10 @@ export function ChatSection({ job }) {
                   }`}
                 >
                   <p className={`text-sm ${message.isDeleted ? "italic text-gray-400 dark:text-gray-500" : ""}`}>
-                    {message.content}
+                    {message.isDeleted ? "This message was deleted" : message.content}
                   </p>
 
-                  {message.attachments?.length > 0 && (
+                  {message.attachments?.length > 0 && !message.isDeleted && (
                     <div className="mt-2 space-y-2">
                       {message.attachments.map((attachment, index) => {
                         const isImage = attachment.type.startsWith("image/")
@@ -310,36 +330,45 @@ export function ChatSection({ job }) {
                   </div>
                 )}
 
-                {/* Message Actions */}
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                  <button
-                    onClick={() => handleReplyToMessage(message)}
-                    className="p-1 rounded-full bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Reply className="w-3 h-3 text-gray-600 dark:text-gray-300" />
-                  </button>
-                  <div className="relative">
+                {!message.isDeleted && (
+                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
                     <button
-                      onClick={() => setShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
+                      onClick={() => handleReplyToMessage(message)}
                       className="p-1 rounded-full bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                      <Smile className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                      <Reply className="w-3 h-3 text-gray-600 dark:text-gray-300" />
                     </button>
-                    {showEmojiPicker === message.id && (
-                      <div className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 z-10 flex space-x-1">
-                        {commonEmojis.map((emoji) => (
-                          <button
-                            key={emoji}
-                            onClick={() => handleAddReaction(message.id, emoji)}
-                            className="hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded"
-                          >
-                            {emoji}
-                          </button>
-                        ))}
-                      </div>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowEmojiPicker(showEmojiPicker === message.id ? null : message.id)}
+                        className="p-1 rounded-full bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Smile className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                      </button>
+                      {showEmojiPicker === message.id && (
+                        <div className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 z-10 flex space-x-1">
+                          {commonEmojis.map((emoji) => (
+                            <button
+                              key={emoji}
+                              onClick={() => handleAddReaction(message.id, emoji)}
+                              className="hover:bg-gray-100 dark:hover:bg-gray-700 p-1 rounded"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {message.sender?.id === job.postedById && (
+                      <button
+                        onClick={() => handleDeleteMessage(message.id)}
+                        className="p-1 rounded-full bg-white dark:bg-gray-800 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Trash2 className="w-3 h-3 text-gray-600 dark:text-gray-300" />
+                      </button>
                     )}
                   </div>
-                </div>
+                )}
               </div>
 
               {message.sender?.id === job.postedById && (
@@ -356,14 +385,13 @@ export function ChatSection({ job }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Reply Preview */}
         {replyingTo && (
           <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
               <Reply className="w-4 h-4 mr-2 text-indigo-500" />
               <span className="truncate">
-                Replying to: {replyingTo.content.substring(0, 50)}
-                {replyingTo.content.length > 50 ? "..." : ""}
+                Replying to: {replyingTo.isDeleted ? "Deleted message" : replyingTo.content.substring(0, 50)}
+                {!replyingTo.isDeleted && replyingTo.content.length > 50 ? "..." : ""}
               </span>
             </div>
             <button
@@ -375,7 +403,6 @@ export function ChatSection({ job }) {
           </div>
         )}
 
-        {/* File Upload Preview */}
         {fileUploads.length > 0 && (
           <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
             <div className="flex flex-wrap gap-2">
@@ -398,7 +425,6 @@ export function ChatSection({ job }) {
           </div>
         )}
 
-        {/* Message Input - Fixed at Bottom */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 relative">
           {showEmojiPicker && (
             <div className="absolute bottom-20 right-4 z-50">

@@ -82,13 +82,27 @@ export default function ProjectTracker() {
           }
         }
 
-        // Fetch pending jobs
+        // Fetch pending jobs (only jobs that haven't been hired yet)
         console.log("[ProjectTracker] Fetching pending jobs");
         const jobsResponse = await axiosInstance.get("/jobs", {
           params: { page: 1, limit: 50, status: "OPEN" },
         });
         console.log("[ProjectTracker] Jobs response:", JSON.stringify(jobsResponse.data, null, 2));
-        const pendingJobs = jobsResponse.data.data?.jobs || [];
+        const allJobs = jobsResponse.data.data?.jobs || [];
+
+        // Filter out jobs that have been hired (have freelancerId)
+        const pendingJobs = allJobs.filter(job => !job.freelancerId);
+
+        // Fetch hired jobs (jobs that have freelancerId assigned)
+        console.log("[ProjectTracker] Fetching hired jobs");
+        const hiredJobsResponse = await axiosInstance.get("/jobs", {
+          params: { page: 1, limit: 50 },
+        });
+        console.log("[ProjectTracker] All jobs response:", JSON.stringify(hiredJobsResponse.data, null, 2));
+        const allJobsForHired = hiredJobsResponse.data.data?.jobs || [];
+
+        // Filter jobs that have been hired (have freelancerId)
+        const hiredJobs = allJobsForHired.filter(job => job.freelancerId);
 
         // Fetch active and completed orders
         console.log("[ProjectTracker] Fetching orders");
@@ -141,6 +155,29 @@ export default function ProjectTracker() {
             freelancerId: order.freelancerId,
           }));
 
+        // Add hired jobs to active projects
+        const hiredJobsFormatted = hiredJobs.map((job) => ({
+          id: job.id,
+          title: job.title,
+          status: "In Progress",
+          editor: job.freelancer
+            ? `${job.freelancer.firstname} ${job.freelancer.lastname}`
+            : "N/A",
+          editorAvatar: job.freelancer?.profilePicture || "/placeholder.svg",
+          deadline: job.deadline ? new Date(job.deadline).toLocaleDateString("en-US") : "N/A",
+          category: job.category || "General",
+          tags: job.skills || [],
+          progress: job.progress || 25,
+          lastUpdated: job.updatedAt
+            ? new Date(job.updatedAt).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+              }) + ", " + new Date(job.updatedAt).toLocaleDateString("en-US")
+            : "N/A",
+          budget: `₹${Number(job.budgetMin || 0).toLocaleString("en-IN")} - ₹${Number(job.budgetMax || 0).toLocaleString("en-IN")}`,
+          freelancerId: job.freelancerId,
+        }));
+
         const pendingJobsFormatted = pendingJobs.map((job) => ({
           id: job.id,
           title: job.title,
@@ -187,7 +224,7 @@ export default function ProjectTracker() {
           }));
 
         setCategories({
-          active: activeOrders,
+          active: [...activeOrders, ...hiredJobsFormatted],
           pending: pendingJobsFormatted,
           completed: completedOrders,
         });

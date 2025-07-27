@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { useParams, useNavigate } from "react-router-dom"
 import {
   Camera,
   Check,
@@ -11,7 +13,6 @@ import {
   MoreVertical,
   Share2,
   Star,
-  Trophy,
   User,
   Briefcase,
   Zap,
@@ -24,92 +25,101 @@ import {
   Sparkles,
   Award,
   Palette,
-  Layers,
-  PenTool,
   Settings,
-  DollarSign,
   Calendar,
   CheckCircle,
   AlertCircle,
-  Image,
-} from "lucide-react";
-import { toast } from "react-toastify"; // Added for error notifications
-import "./animation.css";
-import axiosInstance from "../../utils/axios";
+  Globe,
+  BookOpen,
+  GraduationCap,
+  CalendarDays,
+  Phone,
+  ExternalLink,
+  Languages,
+  Film,
+  Monitor,
+  Scissors,
+  Play,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
+import { toast } from "react-toastify"
+import "./animation.css"
+import axiosInstance from "../../utils/axios"
 
 // Helper function to replace the cn utility
 function cn(...classes) {
-  return classes.filter(Boolean).join(" ");
+  return classes.filter(Boolean).join(" ")
 }
 
 export default function ProfilePage() {
-  const { freelancerId } = useParams();
-  const [activeTab, setActiveTab] = useState("portfolio");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(null);
-  const [profile, setProfile] = useState({});
-  const [portfolioItems, setPortfolioItems] = useState([]);
-  const [about, setAbout] = useState({ text: "", services: [] });
-  const [equipment, setEquipment] = useState({ cameras: [], lenses: [], lighting: [] });
-  const [gigs, setGigs] = useState([]);
-  const [badges, setBadges] = useState([]);
-  const [isOwner, setIsOwner] = useState(false);
-  const [stats, setStats] = useState({ totalJobs: 0, totalHours: 0, successRate: 0, rating: 0 });
-  const [isAddingContent, setIsAddingContent] = useState(false);
-  const [contentType, setContentType] = useState("");
+  const { freelancerId } = useParams()
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState("portfolio")
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(null)
+  const [profile, setProfile] = useState({})
+  const [portfolioItems, setPortfolioItems] = useState([])
+  const [about, setAbout] = useState({ text: "", services: [] })
+  const [equipment, setEquipment] = useState({ cameras: [], lenses: [], lighting: [] })
+  const [gigs, setGigs] = useState([])
+  const [badges, setBadges] = useState([])
+  const [isOwner, setIsOwner] = useState(false)
+  const [stats, setStats] = useState({ totalJobs: 0, totalHours: 0, successRate: 0, rating: 0 })
+  const [isAddingContent, setIsAddingContent] = useState(false)
+  const [contentType, setContentType] = useState("")
   const [newPortfolioItem, setNewPortfolioItem] = useState({
     title: "",
     category: "",
     description: "",
     mediaType: "image",
     mediaUrl: "",
-  });
-  const [newService, setNewService] = useState({
-    title: "",
-    description: "",
-    price: "",
-  });
+  })
   const [newEquipment, setNewEquipment] = useState({
     type: "cameras",
     name: "",
-  });
-  const [newGig, setNewGig] = useState({
-    title: "",
-    description: "",
-    pricing: JSON.stringify({
-      basic: 0,
-      standard: 0,
-      premium: 0
-    }),
-    deliveryTime: 0,
-    category: "",
-    thumbnailUrl: ""
-  });
-  const [isEditingAbout, setIsEditingAbout] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [notificationType, setNotificationType] = useState("success");
-
-  const fileInputRef = useRef(null);
+  })
+  const [isEditingAbout, setIsEditingAbout] = useState(false)
+  const [showNotification, setShowNotification] = useState(false)
+  const [notificationMessage, setNotificationMessage] = useState("")
+  const [notificationType, setNotificationType] = useState("success")
+  const [aboutMe, setAboutMe] = useState({
+    intro: "",
+    background: "",
+    projectTypes: [],
+    languages: [],
+    whyFreelance: "",
+    reelUrl: "",
+    portfolioUrl: "",
+  })
+  const [certifications, setCertifications] = useState([])
+  const [availability, setAvailability] = useState({
+    workingHours: { start: "09:00", end: "17:00" },
+    workingDays: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    deliveryWindows: ["24h", "3-day", "1-week"],
+    discoveryCall: { enabled: true, duration: 30, price: 0 },
+    timeOff: [],
+  })
+  const [selectedDate, setSelectedDate] = useState(new Date())
+  const fileInputRef = useRef(null)
 
   // Fetch profile data
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const endpoint = freelancerId ? `/users/profile/${freelancerId}` : "/users/me";
-        console.log('Fetching profile - Endpoint:', endpoint);
-        console.log('Freelancer ID from params:', freelancerId);
-        
-        const { data } = await axiosInstance.get(endpoint);
-        console.log('Raw API Response:', data);
-        console.log('User data received:', data.data);
-        
-        const userData = data.data;
+        const endpoint = freelancerId ? `/users/profile/${freelancerId}` : "/users/me"
+        console.log("Fetching profile - Endpoint:", endpoint)
+        console.log("Freelancer ID from params:", freelancerId)
 
+        const { data } = await axiosInstance.get(endpoint)
+        console.log("Raw API Response:", data)
+        console.log("User data received:", data.data)
+
+        const userData = data.data
         if (!userData) {
-          console.error('No user data found in response');
-          toast.error("Freelancer profile not found");
-          return;
+          console.error("No user data found in response")
+          toast.error("Freelancer profile not found")
+          return
         }
 
         // Set profile data
@@ -124,47 +134,75 @@ export default function ProfilePage() {
           country: userData.country || "United States",
           city: userData.freelancerProfile?.city || "New York",
           bio: userData.bio || "",
-        });
+        })
 
         // Map portfolio videos
-        const mappedPortfolioItems = (userData.freelancerProfile?.portfolioVideos || []).map(video => ({
+        const mappedPortfolioItems = (userData.freelancerProfile?.portfolioVideos || []).map((video) => ({
           id: video.id,
           title: video.title,
           mediaType: "video",
           mediaUrl: video.videoUrl,
           description: video.description,
           category: video.category,
-          uploadedAt: video.uploadedAt
-        }));
+          uploadedAt: video.uploadedAt,
+        }))
+        setPortfolioItems(mappedPortfolioItems)
 
-        setPortfolioItems(mappedPortfolioItems);
-        
         // Set about data
         setAbout({
           text: userData.freelancerProfile?.overview || "",
           services: userData.freelancerProfile?.skills || [],
-        });
+        })
 
         // Set equipment data
         setEquipment({
           cameras: userData.freelancerProfile?.equipmentCameras?.split(", ") || [],
           lenses: userData.freelancerProfile?.equipmentLenses?.split(", ") || [],
           lighting: userData.freelancerProfile?.equipmentLighting?.split(", ") || [],
-        });
+        })
 
         // Set gigs data
-        setGigs(userData.freelancerProfile?.gigs || []);
+        setGigs(userData.freelancerProfile?.gigs || [])
 
-        // Set badges
-        setBadges(
-          (userData.freelancerProfile?.userBadges || []).map((b) => ({
-            id: b.id,
-            name: b.badge?.name || "Badge",
-            icon: <Trophy className="w-3.5 h-3.5 text-amber-500" />,
+        // Set badges with editor-specific badges
+        const editorBadges = [
+          {
+            id: 1,
+            name: "Video Editor Pro",
+            icon: <Film className="w-3.5 h-3.5 text-blue-500" />,
             achieved: true,
-            isVisible: b.isVisible || true,
-          }))
-        );
+            isVisible: true,
+          },
+          {
+            id: 2,
+            name: "Motion Graphics",
+            icon: <Monitor className="w-3.5 h-3.5 text-green-500" />,
+            achieved: true,
+            isVisible: true,
+          },
+          {
+            id: 3,
+            name: "Color Grading Expert",
+            icon: <Palette className="w-3.5 h-3.5 text-purple-500" />,
+            achieved: true,
+            isVisible: true,
+          },
+          {
+            id: 4,
+            name: "Audio Specialist",
+            icon: <Play className="w-3.5 h-3.5 text-red-500" />,
+            achieved: true,
+            isVisible: true,
+          },
+          {
+            id: 5,
+            name: "Fast Turnaround",
+            icon: <Zap className="w-3.5 h-3.5 text-amber-500" />,
+            achieved: true,
+            isVisible: true,
+          },
+        ]
+        setBadges(editorBadges)
 
         // Set stats data
         setStats({
@@ -172,179 +210,153 @@ export default function ProfilePage() {
           totalHours: userData.totalHours || 0,
           successRate: userData.successRate || 0,
           rating: userData.rating || 0,
-        });
+        })
 
         // Check if current user is the owner
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token")
         if (token) {
-          const decoded = JSON.parse(atob(token.split(".")[1]));
-          setIsOwner(!freelancerId || userData.id === decoded.id);
+          const decoded = JSON.parse(atob(token.split(".")[1]))
+          setIsOwner(!freelancerId || userData.id === decoded.id)
         } else {
-          setIsOwner(false);
+          setIsOwner(false)
         }
-
       } catch (error) {
-        console.error("Error fetching profile:", error);
-        toast.error(error.response?.data?.message || "Failed to load profile");
+        console.error("Error fetching profile:", error)
+        toast.error(error.response?.data?.message || "Failed to load profile")
       }
-    };
+    }
 
-    fetchProfile();
-  }, [freelancerId]);
+    fetchProfile()
+  }, [freelancerId])
 
   // Owner-only handlers with isOwner check
   const handleSaveProfile = async (updatedProfile) => {
     if (!isOwner) {
-      toast.error("You don't have permission to edit this profile");
-      return;
+      toast.error("You don't have permission to edit this profile")
+      return
     }
     try {
-      const { data } = await axiosInstance.patch("/users/me", updatedProfile);
-      setProfile(data.data);
-      setIsModalOpen(false);
-      showNotificationMessage("Profile updated successfully", "success");
+      const { data } = await axiosInstance.patch("/users/me", updatedProfile)
+      setProfile(data.data)
+      setIsModalOpen(false)
+      showNotificationMessage("Profile updated successfully", "success")
     } catch (error) {
-      console.error("Error updating profile:", error);
-      showNotificationMessage("Failed to update profile", "error");
+      console.error("Error updating profile:", error)
+      showNotificationMessage("Failed to update profile", "error")
     }
-  };
+  }
 
   const handleDeleteItem = async (type, id) => {
     if (!isOwner) {
-      toast.error("You don't have permission to delete items from this profile");
-      return;
+      toast.error("You don't have permission to delete items from this profile")
+      return
     }
     try {
-      await axiosInstance.delete(`/users/me/${type}/${id}`);
-      if (type === "portfolio") setPortfolioItems((prev) => prev.filter((item) => item.id !== id));
-      if (type === "gigs") setGigs((prev) => prev.filter((gig) => gig.id !== id));
-      if (type === "services")
-        setAbout((prev) => ({
-          ...prev,
-          services: prev.services.filter((service) => service.id !== id),
-        }));
-      showNotificationMessage(`${type} item deleted successfully`, "success");
+      await axiosInstance.delete(`/users/me/${type}/${id}`)
+      if (type === "portfolio") setPortfolioItems((prev) => prev.filter((item) => item.id !== id))
+      if (type === "gigs") setGigs((prev) => prev.filter((gig) => gig.id !== id))
+      showNotificationMessage(`${type} item deleted successfully`, "success")
     } catch (error) {
-      console.error(`Error deleting ${type}:`, error);
-      showNotificationMessage(`Failed to delete ${type} item`, "error");
+      console.error(`Error deleting ${type}:`, error)
+      showNotificationMessage(`Failed to delete ${type} item`, "error")
     }
-  };
+  }
 
   const handleUpdateItem = async (type, id, updatedItem) => {
     if (!isOwner) {
-      toast.error("You don't have permission to update items on this profile");
-      return;
+      toast.error("You don't have permission to update items on this profile")
+      return
     }
     try {
-      await axiosInstance.patch(`/users/me`, { [type]: updatedItem });
-      if (type === "portfolio") setPortfolioItems((prev) => prev.map((item) => (item.id === id ? updatedItem : item)));
-      if (type === "gigs") setGigs((prev) => prev.map((gig) => (gig.id === id ? updatedItem : gig)));
-      if (type === "services")
-        setAbout((prev) => ({
-          ...prev,
-          services: prev.services.map((service) => (service.id === id ? updatedItem : service)),
-        }));
-      showNotificationMessage(`${type} item updated successfully`, "success");
+      await axiosInstance.patch(`/users/me`, { [type]: updatedItem })
+      if (type === "portfolio") setPortfolioItems((prev) => prev.map((item) => (item.id === id ? updatedItem : item)))
+      if (type === "gigs") setGigs((prev) => prev.map((gig) => (gig.id === id ? updatedItem : gig)))
+      showNotificationMessage(`${type} item updated successfully`, "success")
     } catch (error) {
-      console.error(`Error updating ${type}:`, error);
-      showNotificationMessage(`Failed to update ${type} item`, "error");
+      console.error(`Error updating ${type}:`, error)
+      showNotificationMessage(`Failed to update ${type} item`, "error")
     }
-  };
+  }
 
   const handleAddItem = async (type) => {
     if (!isOwner) {
-      toast.error("You don't have permission to add items to this profile");
-      return;
+      toast.error("You don't have permission to add items to this profile")
+      return
     }
     try {
-      let payload = {};
-      let response;
-
+      let payload = {}
+      let response
       if (type === "portfolio") {
-        payload = { portfolio: newPortfolioItem };
-        response = await axiosInstance.post("/users/me/portfolio", newPortfolioItem);
-        setPortfolioItems((prev) => [...prev, response.data.data]);
-      } else if (type === "services") {
-        payload = { services: newService };
-        response = await axiosInstance.post("/users/me/services", newService);
-        setAbout((prev) => ({
-          ...prev,
-          services: [...prev.services, response.data.data],
-        }));
+        payload = { portfolio: newPortfolioItem }
+        response = await axiosInstance.post("/users/me/portfolio", newPortfolioItem)
+        setPortfolioItems((prev) => [...prev, response.data.data])
       } else if (type === "equipment") {
         const updatedEquipment = {
           ...equipment,
           [newEquipment.type]: [...equipment[newEquipment.type], newEquipment.name],
-        };
-        setEquipment(updatedEquipment);
+        }
+        setEquipment(updatedEquipment)
         payload = {
           [`equipment${newEquipment.type.charAt(0).toUpperCase() + newEquipment.type.slice(1)}`]:
             updatedEquipment[newEquipment.type].join(", "),
-        };
-        await axiosInstance.patch("/users/me", payload);
-      } else if (type === "gigs") {
-        payload = { gigs: newGig };
-        response = await axiosInstance.post("/users/me/gigs", newGig);
-        setGigs((prev) => [...prev, response.data.data]);
+        }
+        await axiosInstance.patch("/users/me", payload)
       }
-
-      setIsAddingContent(false);
-      setNewPortfolioItem({ title: "", category: "", description: "", mediaType: "image", mediaUrl: "" });
-      setNewService({ title: "", description: "", price: "" });
-      setNewEquipment({ type: "cameras", name: "" });
-      setNewGig({ title: "", description: "", pricing: JSON.stringify({
-        basic: 0,
-        standard: 0,
-        premium: 0
-      }), deliveryTime: 0, category: "", thumbnailUrl: "" });
-
-      showNotificationMessage(`New ${type} added successfully`, "success");
+      setIsAddingContent(false)
+      setNewPortfolioItem({ title: "", category: "", description: "", mediaType: "image", mediaUrl: "" })
+      setNewEquipment({ type: "cameras", name: "" })
+      showNotificationMessage(`New ${type} added successfully`, "success")
     } catch (error) {
-      console.error(`Error adding ${type}:`, error);
-      showNotificationMessage(`Failed to add ${type}`, "error");
+      console.error(`Error adding ${type}:`, error)
+      showNotificationMessage(`Failed to add ${type}`, "error")
     }
-  };
+  }
 
   const handleSaveAbout = async () => {
     if (!isOwner) {
-      toast.error("You don't have permission to edit this profile");
-      return;
+      toast.error("You don't have permission to edit this profile")
+      return
     }
     try {
-      await axiosInstance.patch("/users/me", { overview: about.text });
-      setIsEditingAbout(false);
-      showNotificationMessage("About section updated successfully", "success");
+      await axiosInstance.patch("/users/me", { overview: about.text })
+      setIsEditingAbout(false)
+      showNotificationMessage("About section updated successfully", "success")
     } catch (error) {
-      console.error("Error updating about section:", error);
-      showNotificationMessage("Failed to update about section", "error");
+      console.error("Error updating about section:", error)
+      showNotificationMessage("Failed to update about section", "error")
     }
-  };
+  }
 
   const showNotificationMessage = (message, type) => {
-    setNotificationMessage(message);
-    setNotificationType(type);
-    setShowNotification(true);
+    setNotificationMessage(message)
+    setNotificationType(type)
+    setShowNotification(true)
     setTimeout(() => {
-      setShowNotification(false);
-    }, 3000);
-  };
+      setShowNotification(false)
+    }, 3000)
+  }
 
   const handleFileUpload = (e) => {
     if (!isOwner) {
-      toast.error("You don't have permission to upload files to this profile");
-      return;
+      toast.error("You don't have permission to upload files to this profile")
+      return
     }
-    const file = e.target.files[0];
+    const file = e.target.files[0]
     if (file) {
-      const localUrl = URL.createObjectURL(file);
+      const localUrl = URL.createObjectURL(file)
       setNewPortfolioItem({
         ...newPortfolioItem,
         mediaUrl: localUrl,
-      });
+      })
     }
-  };
+  }
+
+  const handleCreateGig = () => {
+    navigate("/create-gig")
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Notification */}
       {showNotification && (
         <div
@@ -368,15 +380,15 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Hero Section with Profile Info */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-indigo-600 h-64 md:h-80"></div>
-        <div className="container mx-auto px-4 pt-24 pb-16 relative z-10">
-          <div className="bg-white rounded-xl shadow-xl overflow-hidden">
-            <div className="flex flex-col md:flex-row">
-              <div className="md:w-1/3 p-8 flex flex-col items-center justify-center border-r border-gray-100">
+      {/* Professional Header Section */}
+      <section className="relative bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col lg:flex-row gap-8 items-start">
+              {/* Profile Image & Basic Info */}
+              <div className="flex flex-col items-center lg:items-start">
                 <div className="relative group">
-                  <div className="w-40 h-40 rounded-full overflow-hidden border-4 border-white shadow-lg ring-4 ring-purple-100">
+                  <div className="w-32 h-32 lg:w-40 lg:h-40 rounded-2xl overflow-hidden border-4 border-white shadow-xl ring-1 ring-gray-200">
                     <img
                       src={profile.profilePicture || "/placeholder.svg"}
                       alt={`${profile.firstname} ${profile.lastname}`}
@@ -384,153 +396,131 @@ export default function ProfilePage() {
                     />
                   </div>
                   {isOwner && (
-                    <div className="absolute bottom-2 right-2">
+                    <div className="absolute -bottom-2 -right-2">
                       <button
                         onClick={() => setIsModalOpen(true)}
-                        className="bg-purple-600 text-white p-2 rounded-full shadow-lg hover:bg-purple-700 transition-all duration-200"
+                        className="bg-gray-900 text-white p-3 rounded-xl shadow-lg hover:bg-gray-800 transition-all duration-200"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
                     </div>
                   )}
-                  <div className="absolute bottom-1 right-8 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                  <div className="absolute -bottom-1 -right-6 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                 </div>
-                <h1 className="text-2xl font-bold mt-4 text-center">
-                  {profile.firstname} {profile.lastname}
-                  {profile.isVerified && (
-                    <span className="inline-flex items-center ml-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Check className="w-3 h-3 text-blue-600" />
-                      </span>
-                    </span>
-                  )}
-                </h1>
-                <div className="text-gray-500 text-center mt-1 flex items-center justify-center">
-                  <MapPin className="w-4 h-4 mr-1" />
-                  {profile.city}, {profile.country}
-                </div>
-                <div className="mt-6 text-center">
-                  <div className="text-3xl font-bold text-purple-600">${profile.hourlyRate}</div>
-                  <div className="text-sm text-gray-500">per hour</div>
-                </div>
-                <div className="mt-6 flex flex-wrap justify-center gap-2">
+
+                {/* Badges */}
+                <div className="mt-6 flex flex-wrap justify-center lg:justify-start gap-2 max-w-xs">
                   {badges
                     .filter((b) => b.isVisible)
+                    .slice(0, 3)
                     .map((badge) => (
                       <span
                         key={badge.id}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r from-amber-50 to-amber-100 text-amber-800 border border-amber-200"
+                        className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200 transition-colors"
                       >
                         {badge.icon}
-                        <span className="ml-1">{badge.name}</span>
+                        <span className="ml-1.5">{badge.name}</span>
                       </span>
                     ))}
                 </div>
+              </div>
+
+              {/* Main Profile Info */}
+              <div className="flex-1 text-center lg:text-left">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
+                  <div>
+                    <h1 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+                      {profile.firstname} {profile.lastname}
+                      {profile.isVerified && (
+                        <span className="inline-flex items-center ml-3">
+                          <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+                            <Check className="w-4 h-4 text-white" />
+                          </div>
+                        </span>
+                      )}
+                    </h1>
+                    <div className="text-gray-600 flex items-center justify-center lg:justify-start mb-4">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      {profile.city}, {profile.country}
+                    </div>
+                  </div>
+
+                  <div className="text-center lg:text-right">
+                    <div className="text-3xl font-bold text-gray-900">${profile.hourlyRate}</div>
+                    <div className="text-sm text-gray-500">per hour</div>
+                  </div>
+                </div>
+
+                {/* Bio */}
+                <p className="text-gray-600 text-lg leading-relaxed mb-6 max-w-3xl">
+                  {profile.bio ||
+                    "Professional video editor specializing in creative storytelling and high-quality post-production."}
+                </p>
+
+                {/* Action Buttons */}
                 {!isOwner && (
-                  <div className="mt-8 flex flex-col gap-3 w-full">
-                    <button className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg flex items-center justify-center">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
+                    <button className="px-6 py-3 bg-gray-900 text-white rounded-xl font-medium hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl flex items-center justify-center">
                       <MessageCircle className="w-5 h-5 mr-2" />
                       Message
                     </button>
-                    <div className="flex gap-2 w-full">
-                      <button className="flex-1 py-2 px-4 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center">
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share
-                      </button>
-                      <button className="flex-1 py-2 px-4 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-all flex items-center justify-center">
-                        <Heart className="w-4 h-4 mr-2" />
-                        Save
-                      </button>
-                    </div>
+                    <button className="px-6 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center justify-center">
+                      <Phone className="w-5 h-5 mr-2" />
+                      Book Call
+                    </button>
+                    <button className="px-6 py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center justify-center">
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </button>
                   </div>
                 )}
               </div>
-              <div className="md:w-2/3 p-8">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-800">Professional Overview</h2>
-                  {isOwner && !isEditingAbout && (
-                    <button
-                      onClick={() => setIsEditingAbout(true)}
-                      className="mt-2 md:mt-0 text-sm text-purple-600 hover:text-purple-800 flex items-center"
-                    >
-                      <Edit className="w-4 h-4 mr-1" />
-                      Edit Overview
-                    </button>
-                  )}
-                </div>
+            </div>
 
-                {isEditingAbout ? (
-                  <div className="space-y-4">
-                    <textarea
-                      value={about.text}
-                      onChange={(e) => setAbout({ ...about, text: e.target.value })}
-                      className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-300 focus:border-purple-500 min-h-[150px]"
-                      placeholder="Write about your professional experience, skills, and expertise..."
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => setIsEditingAbout(false)}
-                        className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSaveAbout}
-                        className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center"
-                      >
-                        <Save className="w-4 h-4 mr-1" />
-                        Save
-                      </button>
-                    </div>
+            {/* Stats Grid */}
+            <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-3 bg-green-50 rounded-xl">
+                    <Briefcase className="w-6 h-6 text-green-600" />
                   </div>
-                ) : (
-                  <p className="text-gray-600 leading-relaxed">
-                    {about.text || "No professional overview provided yet."}
-                  </p>
-                )}
-
-                <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 bg-green-100 rounded-lg">
-                        <Briefcase className="w-5 h-5 text-green-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Total</span>
-                    </div>
-                    <div className="text-2xl font-bold">{stats.totalJobs}</div>
-                    <div className="text-sm text-gray-500">Jobs Completed</div>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 bg-blue-100 rounded-lg">
-                        <Clock className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Total</span>
-                    </div>
-                    <div className="text-2xl font-bold">{stats.totalHours}</div>
-                    <div className="text-sm text-gray-500">Hours Worked</div>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Rate</span>
-                    </div>
-                    <div className="text-2xl font-bold text-purple-600">{stats.successRate}%</div>
-                    <div className="text-sm text-gray-500">Success Rate</div>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="p-2 bg-amber-100 rounded-lg">
-                        <Star className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <span className="text-xs text-gray-500">Average</span>
-                    </div>
-                    <div className="text-2xl font-bold text-amber-600">{stats.rating}/5</div>
-                    <div className="text-sm text-gray-500">Client Rating</div>
-                  </div>
+                  <span className="text-xs text-gray-500 font-medium">COMPLETED</span>
                 </div>
+                <div className="text-2xl font-bold text-gray-900">{stats.totalJobs}</div>
+                <div className="text-sm text-gray-500">Projects</div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-3 bg-blue-50 rounded-xl">
+                    <Clock className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">TOTAL</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{stats.totalHours}</div>
+                <div className="text-sm text-gray-500">Hours</div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-3 bg-emerald-50 rounded-xl">
+                    <CheckCircle className="w-6 h-6 text-emerald-600" />
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">SUCCESS</span>
+                </div>
+                <div className="text-2xl font-bold text-emerald-600">{stats.successRate}%</div>
+                <div className="text-sm text-gray-500">Rate</div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="p-3 bg-amber-50 rounded-xl">
+                    <Star className="w-6 h-6 text-amber-600" />
+                  </div>
+                  <span className="text-xs text-gray-500 font-medium">RATING</span>
+                </div>
+                <div className="text-2xl font-bold text-amber-600">{stats.rating}/5</div>
+                <div className="text-sm text-gray-500">Average</div>
               </div>
             </div>
           </div>
@@ -550,62 +540,57 @@ export default function ProfilePage() {
       {/* Add Content Modal */}
       {isAddingContent && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 modal-overlay">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden modal-content">
-            <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 text-white">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden modal-content">
+            <div className="bg-gray-900 p-6 text-white">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold">
                   {contentType === "portfolio" && "Add Portfolio Item"}
-                  {contentType === "services" && "Add Service"}
                   {contentType === "equipment" && "Add Equipment"}
-                  {contentType === "gigs" && "Create a Gig"}
                 </h2>
                 <button onClick={() => setIsAddingContent(false)} className="text-white/80 hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
-
             <div className="p-6 max-h-[70vh] overflow-y-auto">
               {contentType === "portfolio" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
                     <input
                       type="text"
                       value={newPortfolioItem.title}
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, title: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                       placeholder="Enter portfolio item title"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                     <select
                       value={newPortfolioItem.category}
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, category: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                     >
                       <option value="">Select a category</option>
-                      <option value="Photography">Photography</option>
-                      <option value="Videography">Videography</option>
-                      <option value="Design">Design</option>
+                      <option value="Video Editing">Video Editing</option>
+                      <option value="Motion Graphics">Motion Graphics</option>
+                      <option value="Color Grading">Color Grading</option>
+                      <option value="Audio Post">Audio Post</option>
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
                     <textarea
                       value={newPortfolioItem.description}
                       onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, description: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none min-h-[100px]"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none min-h-[100px]"
                       placeholder="Describe your portfolio item"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Media Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Media Type</label>
                     <div className="flex gap-4">
                       <label className="flex items-center">
                         <input
@@ -614,7 +599,7 @@ export default function ProfilePage() {
                           onChange={() => setNewPortfolioItem({ ...newPortfolioItem, mediaType: "image" })}
                           className="mr-2"
                         />
-                        <Image className="w-4 h-4 mr-1" />
+                        <ImageIcon className="w-4 h-4 mr-1" />
                         Image
                       </label>
                       <label className="flex items-center">
@@ -629,9 +614,8 @@ export default function ProfilePage() {
                       </label>
                     </div>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       {newPortfolioItem.mediaType === "image" ? "Upload Image" : "Video URL"}
                     </label>
                     {newPortfolioItem.mediaType === "image" ? (
@@ -645,14 +629,14 @@ export default function ProfilePage() {
                         />
                         <div
                           onClick={() => fileInputRef.current?.click()}
-                          className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-purple-400 transition-colors"
+                          className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-gray-400 transition-colors"
                         >
                           {newPortfolioItem.mediaUrl ? (
                             <div className="relative">
                               <img
                                 src={newPortfolioItem.mediaUrl || "/placeholder.svg"}
                                 alt="Preview"
-                                className="max-h-40 mx-auto rounded"
+                                className="max-h-40 mx-auto rounded-lg"
                               />
                               <button
                                 onClick={(e) => {
@@ -677,722 +661,846 @@ export default function ProfilePage() {
                         type="text"
                         value={newPortfolioItem.mediaUrl}
                         onChange={(e) => setNewPortfolioItem({ ...newPortfolioItem, mediaUrl: e.target.value })}
-                        className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                         placeholder="Enter YouTube or Vimeo URL"
                       />
                     )}
                   </div>
                 </div>
               )}
-
-              {contentType === "services" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Service Title</label>
-                    <input
-                      type="text"
-                      value={newService.title}
-                      onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                      placeholder="E.g., Portrait Photography"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                      value={newService.description}
-                      onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none min-h-[100px]"
-                      placeholder="Describe the service you offer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Price (optional)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <DollarSign className="w-4 h-4 text-gray-500" />
-                      </div>
-                      <input
-                        type="text"
-                        value={newService.price}
-                        onChange={(e) => setNewService({ ...newService, price: e.target.value })}
-                        className="w-full p-2.5 pl-10 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                        placeholder="Enter price"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {contentType === "equipment" && (
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Equipment Type</label>
                     <select
                       value={newEquipment.type}
                       onChange={(e) => setNewEquipment({ ...newEquipment, type: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                     >
                       <option value="cameras">Camera</option>
                       <option value="lenses">Lens</option>
                       <option value="lighting">Lighting</option>
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Equipment Name</label>
                     <input
                       type="text"
                       value={newEquipment.name}
                       onChange={(e) => setNewEquipment({ ...newEquipment, name: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                       placeholder="E.g., Canon EOS R5"
                     />
                   </div>
                 </div>
               )}
-
-              {contentType === "gigs" && (
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Gig Title</label>
-                    <input
-                      type="text"
-                      value={newGig.title}
-                      onChange={(e) => setNewGig({ ...newGig, title: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                      placeholder="E.g., Professional Headshot Photography"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                      value={newGig.description}
-                      onChange={(e) => setNewGig({ ...newGig, description: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none min-h-[100px]"
-                      placeholder="Describe your gig in detail"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Basic Package Price</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <DollarSign className="w-4 h-4 text-gray-500" />
-                      </div>
-                      <input
-                        type="number"
-                        value={typeof newGig.pricing === 'string' ? JSON.parse(newGig.pricing).basic : newGig.pricing.basic}
-                        onChange={(e) => {
-                          const pricing = typeof newGig.pricing === 'string' ? JSON.parse(newGig.pricing) : newGig.pricing;
-                          setNewGig({
-                            ...newGig,
-                            pricing: JSON.stringify({
-                              ...pricing,
-                              basic: parseFloat(e.target.value)
-                            })
-                          });
-                        }}
-                        className="w-full p-2.5 pl-10 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                        placeholder="Enter starting price"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Time (days)</label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Calendar className="w-4 h-4 text-gray-500" />
-                      </div>
-                      <input
-                        type="number"
-                        value={newGig.deliveryTime}
-                        onChange={(e) => setNewGig({ ...newGig, deliveryTime: parseInt(e.target.value) })}
-                        className="w-full p-2.5 pl-10 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                        placeholder="E.g., 3"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <input
-                      type="text"
-                      value={newGig.category || ""}
-                      onChange={(e) => setNewGig({ ...newGig, category: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                      placeholder="E.g., Video Editing"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Thumbnail URL</label>
-                    <input
-                      type="text"
-                      value={newGig.thumbnailUrl}
-                      onChange={(e) => setNewGig({ ...newGig, thumbnailUrl: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
-                      placeholder="Enter thumbnail URL"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
-
-            <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
               <button
                 onClick={() => setIsAddingContent(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+                className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleAddItem(contentType)}
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-md hover:from-purple-600 hover:to-indigo-600 transition-all shadow-sm hover:shadow flex items-center"
+                className="px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all shadow-sm hover:shadow flex items-center"
               >
                 <Plus className="w-4 h-4 mr-1" />
-                Add{" "}
-                {contentType === "portfolio"
-                  ? "Item"
-                  : contentType === "services"
-                    ? "Service"
-                    : contentType === "equipment"
-                      ? "Equipment"
-                      : "Gig"}
+                Add {contentType === "portfolio" ? "Item" : "Equipment"}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Tabs Navigation */}
+      {/* Navigation Tabs */}
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-          <div className="flex overflow-x-auto">
-            {["portfolio", "reviews", "about", "equipment", "gigs"].map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex-1 py-4 px-6 flex flex-col items-center justify-center transition-all duration-300 ${
-                  activeTab === tab
-                    ? "bg-gradient-to-b from-purple-50 to-white text-purple-700 border-b-2 border-purple-600"
-                    : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
-                }`}
-              >
-                <div className={`p-2 rounded-full mb-1 ${activeTab === tab ? "bg-purple-100" : "bg-gray-100"}`}>
-                  {tab === "portfolio" && <ImageIcon className="w-5 h-5" />}
-                  {tab === "reviews" && <Star className="w-5 h-5" />}
-                  {tab === "about" && <User className="w-5 h-5" />}
-                  {tab === "equipment" && <Camera className="w-5 h-5" />}
-                  {tab === "gigs" && <Briefcase className="w-5 h-5" />}
-                </div>
-                <span className="text-sm font-medium capitalize">{tab}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8">
-          {/* Portfolio Tab */}
-          {activeTab === "portfolio" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold flex items-center">
-                  <Palette className="w-5 h-5 mr-2 text-purple-600" />
-                  Portfolio
-                </h2>
-                {isOwner && (
-                  <button
-                    onClick={() => {
-                      setContentType("portfolio")
-                      setIsAddingContent(true)
-                    }}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Item
-                  </button>
-                )}
-              </div>
-              {portfolioItems.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 empty-state bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                  <div className="bg-purple-50 rounded-full p-6 mb-4 empty-state-icon">
-                    <ImageIcon className="w-12 h-12 text-purple-400" />
+        <div className="max-w-6xl mx-auto">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-8">
+            <div className="flex overflow-x-auto">
+              {["portfolio", "about-me", "certifications", "availability", "equipment", "gigs"].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-4 px-6 flex flex-col items-center justify-center transition-all duration-300 min-w-[120px] ${
+                    activeTab === tab
+                      ? "bg-gray-50 text-gray-900 border-b-2 border-gray-900"
+                      : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                  }`}
+                >
+                  <div className={`p-2 rounded-xl mb-2 ${activeTab === tab ? "bg-gray-200" : "bg-gray-100"}`}>
+                    {tab === "portfolio" && <ImageIcon className="w-5 h-5" />}
+                    {tab === "about-me" && <User className="w-5 h-5" />}
+                    {tab === "certifications" && <GraduationCap className="w-5 h-5" />}
+                    {tab === "availability" && <CalendarDays className="w-5 h-5" />}
+                    {tab === "equipment" && <Camera className="w-5 h-5" />}
+                    {tab === "gigs" && <Briefcase className="w-5 h-5" />}
                   </div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">No portfolio items yet</h3>
-                  <p className="text-center text-gray-500 max-w-md mb-6">
-                    Showcase your best work to attract potential clients. Add photos, videos, and projects to your
-                    portfolio.
-                  </p>
+                  <span className="text-sm font-medium capitalize">{tab.replace("-", " ")}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            {/* Portfolio Tab */}
+            {activeTab === "portfolio" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <Palette className="w-6 h-6 mr-3 text-gray-700" />
+                      Portfolio
+                    </h2>
+                    <p className="text-gray-600 mt-1">Showcase your best work and creative projects</p>
+                  </div>
                   {isOwner && (
                     <button
                       onClick={() => {
                         setContentType("portfolio")
                         setIsAddingContent(true)
                       }}
-                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all shadow-md hover:shadow-lg flex items-center"
+                      className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors flex items-center shadow-sm"
                     >
-                      <Plus className="w-5 h-5 mr-2" />
-                      Add Your First Portfolio Item
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Item
                     </button>
                   )}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {portfolioItems.map((item) => (
-                    <PortfolioItem
-                      key={item.id}
-                      item={item}
-                      isOwner={isOwner}
-                      onDelete={() => handleDeleteItem("portfolio", item.id)}
-                      onUpdate={(updated) => handleUpdateItem("portfolio", item.id, updated)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Reviews Tab */}
-          {activeTab === "reviews" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold flex items-center">
-                  <Star className="w-5 h-5 mr-2 text-amber-500" />
-                  Reviews
-                </h2>
-              </div>
-              <div className="flex flex-col items-center justify-center py-16 empty-state bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                <div className="bg-amber-50 rounded-full p-6 mb-4 empty-state-icon">
-                  <Star className="w-12 h-12 text-amber-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-700 mb-2">No reviews yet</h3>
-                <p className="text-center text-gray-500 max-w-md mb-6">
-                  Reviews from your clients will appear here. Complete more jobs to get reviews.
-                </p>
-                {isOwner && (
-                  <button className="px-6 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all shadow-md hover:shadow-lg flex items-center">
-                    <Share2 className="w-5 h-5 mr-2" />
-                    Share Your Profile
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* About Tab */}
-          {activeTab === "about" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold flex items-center">
-                  <Layers className="w-5 h-5 mr-2 text-indigo-600" />
-                  Services
-                </h2>
-                {isOwner && (
-                  <button
-                    onClick={() => {
-                      setContentType("services")
-                      setIsAddingContent(true)
-                    }}
-                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Service
-                  </button>
-                )}
-              </div>
-              {about.services.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 empty-state bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                  <div className="bg-indigo-50 rounded-full p-6 mb-4 empty-state-icon">
-                    <PenTool className="w-12 h-12 text-indigo-400" />
+                {portfolioItems.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 empty-state bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
+                    <div className="bg-gray-100 rounded-2xl p-8 mb-6 empty-state-icon">
+                      <ImageIcon className="w-16 h-16 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-3">No portfolio items yet</h3>
+                    <p className="text-center text-gray-500 max-w-md mb-8 leading-relaxed">
+                      Showcase your best work to attract potential clients. Add videos, images, and projects to your
+                      portfolio.
+                    </p>
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setContentType("portfolio")
+                          setIsAddingContent(true)
+                        }}
+                        className="px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl flex items-center"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Add Your First Portfolio Item
+                      </button>
+                    )}
                   </div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">No services listed yet</h3>
-                  <p className="text-center text-gray-500 max-w-md mb-6">
-                    Let potential clients know what services you offer. Add your specialties and expertise.
-                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {portfolioItems.map((item) => (
+                      <PortfolioItem
+                        key={item.id}
+                        item={item}
+                        isOwner={isOwner}
+                        onDelete={() => handleDeleteItem("portfolio", item.id)}
+                        onUpdate={(updated) => handleUpdateItem("portfolio", item.id, updated)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* About Me Tab */}
+            {activeTab === "about-me" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <User className="w-6 h-6 mr-3 text-gray-700" />
+                      About Me
+                    </h2>
+                    <p className="text-gray-600 mt-1">Learn more about my background and expertise</p>
+                  </div>
                   {isOwner && (
                     <button
-                      onClick={() => {
-                        setContentType("services")
-                        setIsAddingContent(true)
-                      }}
-                      className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg hover:from-indigo-600 hover:to-blue-600 transition-all shadow-md hover:shadow-lg flex items-center"
+                      onClick={() => setIsEditingAbout(true)}
+                      className="px-6 py-3 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors flex items-center"
                     >
-                      <Plus className="w-5 h-5 mr-2" />
-                      Add Your First Service
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit
                     </button>
                   )}
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {about.services.map((service) => (
-                    <div
-                      key={service.id}
-                      className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all relative group"
-                    >
-                      {isOwner && (
-                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => setIsDropdownOpen(service.id)}
-                            className="p-1 bg-gray-100 rounded-full hover:bg-gray-200"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          {isDropdownOpen === service.id && (
-                            <div className="absolute top-full right-0 mt-1 bg-white shadow-lg rounded-lg overflow-hidden z-10 w-36">
-                              <button
-                                onClick={() => {
-                                  const updated = prompt("Update service title:", service.title)
-                                  if (updated)
-                                    handleUpdateItem("services", service.id, {
-                                      ...service,
-                                      title: updated,
-                                    })
-                                  setIsDropdownOpen(null)
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
-                              >
-                                <Edit className="w-4 h-4 mr-2 text-gray-500" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDeleteItem("services", service.id)
-                                  setIsDropdownOpen(null)
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500 flex items-center"
-                              >
-                                <X className="w-4 h-4 mr-2" />
-                                Delete
-                              </button>
-                            </div>
-                          )}
+
+                <div className="space-y-8">
+                  {/* Introduction */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Sparkles className="w-5 h-5 mr-2 text-blue-500" />
+                      Introduction
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      {about.text ||
+                        "I'm a passionate video editor with over 5 years of experience in post-production. I specialize in creating compelling visual narratives that engage audiences and bring stories to life through creative editing techniques."}
+                    </p>
+                  </div>
+
+                  {/* Background in Editing */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Film className="w-5 h-5 mr-2 text-green-500" />
+                      Background in Editing
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      Started my journey in video editing during college, working on short films and documentaries. Over
+                      the years, I've expanded my expertise to include commercial work, social media content, and
+                      corporate videos. I'm proficient in Adobe Premiere Pro, Final Cut Pro, and DaVinci Resolve.
+                    </p>
+                  </div>
+
+                  {/* Project Types */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Heart className="w-5 h-5 mr-2 text-red-500" />
+                      Types of Projects I Love
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {[
+                        "Music Videos",
+                        "Short Films",
+                        "Corporate Videos",
+                        "Social Media Content",
+                        "Documentaries",
+                        "Commercials",
+                      ].map((type) => (
+                        <div
+                          key={type}
+                          className="bg-white rounded-lg p-3 text-center text-sm font-medium text-gray-700 border border-gray-200"
+                        >
+                          {type}
                         </div>
-                      )}
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Languages */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Languages className="w-5 h-5 mr-2 text-purple-500" />
+                      Languages Spoken
+                    </h3>
+                    <div className="flex flex-wrap gap-3">
+                      {["English (Native)", "Spanish (Fluent)", "French (Conversational)"].map((lang) => (
+                        <span
+                          key={lang}
+                          className="bg-white px-4 py-2 rounded-lg text-sm font-medium text-gray-700 border border-gray-200"
+                        >
+                          {lang}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Why I Freelance */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Zap className="w-5 h-5 mr-2 text-amber-500" />
+                      Why I Freelance
+                    </h3>
+                    <p className="text-gray-700 leading-relaxed">
+                      Freelancing allows me to work on diverse projects and collaborate with creative minds from around
+                      the world. I love the flexibility it provides and the opportunity to constantly learn new
+                      techniques and styles while helping clients bring their visions to life.
+                    </p>
+                  </div>
+
+                  {/* External Links */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <ExternalLink className="w-5 h-5 mr-2 text-indigo-500" />
+                      External Portfolio & Reel
+                    </h3>
+                    <div className="space-y-3">
+                      <a
+                        href="#"
+                        className="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        <Play className="w-5 h-5 mr-3 text-red-500" />
+                        <div>
+                          <div className="font-medium text-gray-900">Demo Reel 2024</div>
+                          <div className="text-sm text-gray-500">Watch my latest work compilation</div>
+                        </div>
+                        <ExternalLink className="w-4 h-4 ml-auto text-gray-400" />
+                      </a>
+                      <a
+                        href="#"
+                        className="flex items-center p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        <Globe className="w-5 h-5 mr-3 text-blue-500" />
+                        <div>
+                          <div className="font-medium text-gray-900">Personal Website</div>
+                          <div className="text-sm text-gray-500">View my complete portfolio</div>
+                        </div>
+                        <ExternalLink className="w-4 h-4 ml-auto text-gray-400" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Certifications Tab */}
+            {activeTab === "certifications" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <GraduationCap className="w-6 h-6 mr-3 text-gray-700" />
+                      Certifications & Education
+                    </h2>
+                    <p className="text-gray-600 mt-1">Professional qualifications and educational background</p>
+                  </div>
+                  {isOwner && (
+                    <button className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors flex items-center shadow-sm">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Certification
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid gap-6">
+                  {/* Adobe Certification */}
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-2xl p-6 border border-red-100">
+                    <div className="flex items-start justify-between">
                       <div className="flex items-start">
-                        <div className="p-3 bg-indigo-100 rounded-lg mr-4">
-                          <Award className="w-6 h-6 text-indigo-600" />
+                        <div className="p-3 bg-red-100 rounded-xl mr-4">
+                          <Award className="w-6 h-6 text-red-600" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg">{service.title}</h3>
-                          <p className="text-gray-600 mt-2">{service.description}</p>
-                          {service.price && (
-                            <div className="mt-4 inline-block px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-sm font-medium">
-                              Starting at ${service.price}
-                            </div>
-                          )}
+                          <h3 className="text-lg font-semibold text-gray-900">Adobe Certified Expert</h3>
+                          <p className="text-red-600 font-medium">Premiere Pro & After Effects</p>
+                          <p className="text-gray-600 mt-2">
+                            Advanced certification in video editing and motion graphics
+                          </p>
+                          <div className="flex items-center mt-3 text-sm text-gray-500">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Certified: March 2023
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm font-medium">Verified</div>
+                    </div>
+                  </div>
+
+                  {/* Film School */}
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start">
+                        <div className="p-3 bg-blue-100 rounded-xl mr-4">
+                          <BookOpen className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Bachelor of Fine Arts</h3>
+                          <p className="text-blue-600 font-medium">Film & Television Production</p>
+                          <p className="text-gray-600 mt-2">New York Film Academy</p>
+                          <div className="flex items-center mt-3 text-sm text-gray-500">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Graduated: May 2019
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">Degree</div>
+                    </div>
+                  </div>
+
+                  {/* Final Cut Pro */}
+                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-6 border border-gray-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start">
+                        <div className="p-3 bg-gray-100 rounded-xl mr-4">
+                          <Scissors className="w-6 h-6 text-gray-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Final Cut Pro Masterclass</h3>
+                          <p className="text-gray-600 font-medium">Advanced Editing Techniques</p>
+                          <p className="text-gray-600 mt-2">
+                            Completed comprehensive training in professional video editing workflows
+                          </p>
+                          <div className="flex items-center mt-3 text-sm text-gray-500">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Completed: January 2022
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">Course</div>
+                    </div>
+                  </div>
+
+                  {/* DaVinci Resolve */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 rounded-2xl p-6 border border-yellow-100">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start">
+                        <div className="p-3 bg-yellow-100 rounded-xl mr-4">
+                          <Palette className="w-6 h-6 text-yellow-600" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">DaVinci Resolve Certified Colorist</h3>
+                          <p className="text-yellow-600 font-medium">Color Grading & Correction</p>
+                          <p className="text-gray-600 mt-2">
+                            Professional certification in color grading and post-production workflows
+                          </p>
+                          <div className="flex items-center mt-3 text-sm text-gray-500">
+                            <Calendar className="w-4 h-4 mr-1" />
+                            Certified: September 2023
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm font-medium">
+                        Verified
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Availability Tab */}
+            {activeTab === "availability" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <CalendarDays className="w-6 h-6 mr-3 text-gray-700" />
+                      Availability & Booking
+                    </h2>
+                    <p className="text-gray-600 mt-1">Schedule consultations and view my availability</p>
+                  </div>
+                </div>
+
+                <div className="grid lg:grid-cols-2 gap-8">
+                  {/* Calendar */}
+                  <div className="bg-gray-50 rounded-2xl p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Calendar className="w-5 h-5 mr-2 text-blue-500" />
+                      Calendar Availability
+                    </h3>
+                    <div className="bg-white rounded-xl p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-4">
+                        <button className="p-2 hover:bg-gray-100 rounded-lg">
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <h4 className="font-semibold">January 2024</h4>
+                        <button className="p-2 hover:bg-gray-100 rounded-lg">
+                          <ChevronRight className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+                          <div key={day} className="p-2 font-medium text-gray-500">
+                            {day}
+                          </div>
+                        ))}
+                        {Array.from({ length: 31 }, (_, i) => (
+                          <button
+                            key={i + 1}
+                            className={`p-2 rounded-lg hover:bg-gray-100 ${
+                              [5, 12, 19, 26].includes(i + 1)
+                                ? "bg-red-100 text-red-600"
+                                : [3, 10, 17, 24, 31].includes(i + 1)
+                                  ? "bg-green-100 text-green-600"
+                                  : ""
+                            }`}
+                          >
+                            {i + 1}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex items-center justify-between text-xs">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-green-100 rounded mr-2"></div>
+                          <span>Available</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 bg-red-100 rounded mr-2"></div>
+                          <span>Busy</span>
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+                  </div>
 
-          {/* Equipment Tab */}
-          {activeTab === "equipment" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold flex items-center">
-                  <Camera className="w-5 h-5 mr-2 text-green-600" />
-                  Equipment
-                </h2>
-                {isOwner && (
-                  <button
-                    onClick={() => {
-                      setContentType("equipment")
-                      setIsAddingContent(true)
-                    }}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Add Equipment
-                  </button>
-                )}
-              </div>
-              <div className="space-y-8">
-                {["cameras", "lenses", "lighting"].map((category) => (
-                  <div key={category} className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
-                    <h3 className="text-lg font-medium mb-4 capitalize flex items-center">
-                      {category === "cameras" && <Camera className="w-5 h-5 mr-2 text-green-600" />}
-                      {category === "lenses" && (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="w-5 h-5 mr-2 text-blue-600"
-                        >
-                          <circle cx="12" cy="12" r="3"></circle>
-                          <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
-                          <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
-                          <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
-                          <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
-                        </svg>
-                      )}
-                      {category === "lighting" && <Zap className="w-5 h-5 mr-2 text-amber-600" />}
-                      {category}
-                    </h3>
-                    {equipment[category].length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-8 empty-state bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                        <p className="text-gray-500 mb-4">No {category} added yet</p>
-                        {isOwner && (
-                          <button
-                            onClick={() => {
-                              setContentType("equipment")
-                              setNewEquipment({ type: category, name: "" })
-                              setIsAddingContent(true)
-                            }}
-                            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center text-sm"
-                          >
-                            <Plus className="w-4 h-4 mr-1" />
-                            Add {category.slice(0, -1)}
-                          </button>
-                        )}
+                  {/* Booking Options */}
+                  <div className="space-y-6">
+                    {/* Discovery Call */}
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-start">
+                          <div className="p-3 bg-blue-100 rounded-xl mr-4">
+                            <Phone className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Discovery Call</h3>
+                            <p className="text-gray-600">30-minute consultation to discuss your project</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold text-blue-600">Free</div>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {equipment[category].map((item, index) => (
-                          <div
-                            key={index}
-                            className="bg-white rounded-lg p-4 shadow-sm border border-gray-100 flex items-center gap-3 relative group hover:shadow-md transition-all"
+                      <button className="w-full py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium">
+                        Book Discovery Call
+                      </button>
+                    </div>
+
+                    {/* Working Hours */}
+                    <div className="bg-gray-50 rounded-2xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <Clock className="w-5 h-5 mr-2 text-green-500" />
+                        Working Hours
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Monday - Friday</span>
+                          <span className="font-medium">9:00 AM - 5:00 PM EST</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Saturday</span>
+                          <span className="font-medium">10:00 AM - 2:00 PM EST</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Sunday</span>
+                          <span className="text-red-500">Closed</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delivery Windows */}
+                    <div className="bg-gray-50 rounded-2xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <Zap className="w-5 h-5 mr-2 text-amber-500" />
+                        Delivery Options
+                      </h3>
+                      <div className="grid gap-3">
+                        <div className="bg-white rounded-lg p-3 border border-gray-200 flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">Rush Delivery</div>
+                            <div className="text-sm text-gray-500">24 hours</div>
+                          </div>
+                          <div className="text-amber-600 font-medium">+50%</div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200 flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">Standard</div>
+                            <div className="text-sm text-gray-500">3-5 days</div>
+                          </div>
+                          <div className="text-green-600 font-medium">Standard Rate</div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3 border border-gray-200 flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">Extended</div>
+                            <div className="text-sm text-gray-500">1-2 weeks</div>
+                          </div>
+                          <div className="text-blue-600 font-medium">-15%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Equipment Tab */}
+            {activeTab === "equipment" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <Camera className="w-6 h-6 mr-3 text-gray-700" />
+                      Equipment
+                    </h2>
+                    <p className="text-gray-600 mt-1">Professional tools and hardware I use</p>
+                  </div>
+                  {isOwner && (
+                    <button
+                      onClick={() => {
+                        setContentType("equipment")
+                        setIsAddingContent(true)
+                      }}
+                      className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors flex items-center shadow-sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Equipment
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-8">
+                  {["cameras", "lenses", "lighting"].map((category) => (
+                    <div key={category} className="bg-gray-50 rounded-2xl p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-6 capitalize flex items-center">
+                        {category === "cameras" && <Camera className="w-5 h-5 mr-3 text-green-600" />}
+                        {category === "lenses" && (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="w-5 h-5 mr-3 text-blue-600"
                           >
-                            {isOwner && (
-                              <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={() => setIsDropdownOpen(`${category}-${index}`)}
-                                  className="p-1 bg-gray-100 rounded-full hover:bg-gray-200"
-                                >
-                                  <MoreVertical className="w-4 h-4" />
-                                </button>
-                                {isDropdownOpen === `${category}-${index}` && (
-                                  <div className="absolute top-full right-0 mt-1 bg-white shadow-lg rounded-lg overflow-hidden z-10 w-36">
-                                    <button
-                                      onClick={() => {
-                                        const updated = prompt(`Update ${category} item:`, item)
-                                        if (updated) {
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                            <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                            <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                            <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                          </svg>
+                        )}
+                        {category === "lighting" && <Zap className="w-5 h-5 mr-3 text-amber-600" />}
+                        {category}
+                      </h3>
+                      {equipment[category].length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 empty-state bg-white rounded-xl border-2 border-dashed border-gray-300">
+                          <p className="text-gray-500 mb-4">No {category} added yet</p>
+                          {isOwner && (
+                            <button
+                              onClick={() => {
+                                setContentType("equipment")
+                                setNewEquipment({ type: category, name: "" })
+                                setIsAddingContent(true)
+                              }}
+                              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors flex items-center text-sm"
+                            >
+                              <Plus className="w-4 h-4 mr-1" />
+                              Add {category.slice(0, -1)}
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                          {equipment[category].map((item, index) => (
+                            <div
+                              key={index}
+                              className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 flex items-center gap-3 relative group hover:shadow-md transition-all"
+                            >
+                              {isOwner && (
+                                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => setIsDropdownOpen(`${category}-${index}`)}
+                                    className="p-1 bg-gray-100 rounded-full hover:bg-gray-200"
+                                  >
+                                    <MoreVertical className="w-4 h-4" />
+                                  </button>
+                                  {isDropdownOpen === `${category}-${index}` && (
+                                    <div className="absolute top-full right-0 mt-1 bg-white shadow-lg rounded-lg overflow-hidden z-10 w-36">
+                                      <button
+                                        onClick={() => {
+                                          const updated = prompt(`Update ${category} item:`, item)
+                                          if (updated) {
+                                            const updatedEquipment = {
+                                              ...equipment,
+                                              [category]: equipment[category].map((i, idx) =>
+                                                idx === index ? updated : i,
+                                              ),
+                                            }
+                                            setEquipment(updatedEquipment)
+                                            handleUpdateItem("equipment", null, {
+                                              [`equipment${category.charAt(0).toUpperCase() + category.slice(1)}`]:
+                                                updatedEquipment[category].join(", "),
+                                            })
+                                          }
+                                          setIsDropdownOpen(null)
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
+                                      >
+                                        <Edit className="w-4 h-4 mr-2 text-gray-500" />
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => {
                                           const updatedEquipment = {
                                             ...equipment,
-                                            [category]: equipment[category].map((i, idx) =>
-                                              idx === index ? updated : i,
-                                            ),
+                                            [category]: equipment[category].filter((_, idx) => idx !== index),
                                           }
                                           setEquipment(updatedEquipment)
                                           handleUpdateItem("equipment", null, {
                                             [`equipment${category.charAt(0).toUpperCase() + category.slice(1)}`]:
                                               updatedEquipment[category].join(", "),
                                           })
-                                        }
-                                        setIsDropdownOpen(null)
-                                      }}
-                                      className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
+                                          setIsDropdownOpen(null)
+                                        }}
+                                        className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500 flex items-center"
+                                      >
+                                        <X className="w-4 h-4 mr-2" />
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              <div className="w-10 h-10 rounded-full flex items-center justify-center">
+                                {category === "cameras" && (
+                                  <div className="p-2 bg-green-100 rounded-full">
+                                    <Camera className="w-5 h-5 text-green-600" />
+                                  </div>
+                                )}
+                                {category === "lenses" && (
+                                  <div className="p-2 bg-blue-100 rounded-full">
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="24"
+                                      height="24"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      className="w-5 h-5 text-blue-600"
                                     >
-                                      <Edit className="w-4 h-4 mr-2 text-gray-500" />
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => {
-                                        const updatedEquipment = {
-                                          ...equipment,
-                                          [category]: equipment[category].filter((_, idx) => idx !== index),
-                                        }
-                                        setEquipment(updatedEquipment)
-                                        handleUpdateItem("equipment", null, {
-                                          [`equipment${category.charAt(0).toUpperCase() + category.slice(1)}`]:
-                                            updatedEquipment[category].join(", "),
-                                        })
-                                        setIsDropdownOpen(null)
-                                      }}
-                                      className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500 flex items-center"
-                                    >
-                                      <X className="w-4 h-4 mr-2" />
-                                      Delete
-                                    </button>
+                                      <circle cx="12" cy="12" r="3"></circle>
+                                      <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
+                                      <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
+                                      <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
+                                      <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
+                                    </svg>
+                                  </div>
+                                )}
+                                {category === "lighting" && (
+                                  <div className="p-2 bg-amber-100 rounded-full">
+                                    <Zap className="w-5 h-5 text-amber-600" />
                                   </div>
                                 )}
                               </div>
-                            )}
-                            <div className="w-10 h-10 rounded-full flex items-center justify-center">
-                              {category === "cameras" && (
-                                <div className="p-2 bg-green-100 rounded-full">
-                                  <Camera className="w-5 h-5 text-green-600" />
-                                </div>
-                              )}
-                              {category === "lenses" && (
-                                <div className="p-2 bg-blue-100 rounded-full">
-                                  <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="w-5 h-5 text-blue-600"
-                                  >
-                                    <circle cx="12" cy="12" r="3"></circle>
-                                    <path d="M3 7V5a2 2 0 0 1 2-2h2"></path>
-                                    <path d="M17 3h2a2 2 0 0 1 2 2v2"></path>
-                                    <path d="M21 17v2a2 2 0 0 1-2 2h-2"></path>
-                                    <path d="M7 21H5a2 2 0 0 1-2-2v-2"></path>
-                                  </svg>
-                                </div>
-                              )}
-                              {category === "lighting" && (
-                                <div className="p-2 bg-amber-100 rounded-full">
-                                  <Zap className="w-5 h-5 text-amber-600" />
-                                </div>
-                              )}
+                              <span className="font-medium text-gray-900">{item}</span>
                             </div>
-                            <span className="font-medium">{item}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Gigs Tab */}
-          {activeTab === "gigs" && (
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold flex items-center">
-                  <Briefcase className="w-5 h-5 mr-2 text-purple-600" />
-                  Gigs
-                </h2>
-                {isOwner && (
-                  <button
-                    onClick={() => {
-                      setContentType("gigs")
-                      setIsAddingContent(true)
-                    }}
-                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center"
-                  >
-                    <Plus className="w-4 h-4 mr-1" />
-                    Create Gig
-                  </button>
-                )}
-              </div>
-              {gigs.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 empty-state bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                  <div className="bg-purple-50 rounded-full p-6 mb-4 empty-state-icon">
-                    <Briefcase className="w-12 h-12 text-purple-400" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-700 mb-2">No gigs created yet</h3>
-                  <p className="text-center text-gray-500 max-w-md mb-6">
-                    Create gigs to offer your services with fixed prices and delivery times.
-                  </p>
-                  {isOwner && (
-                    <button
-                      onClick={() => {
-                        setContentType("gigs")
-                        setIsAddingContent(true)
-                      }}
-                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg hover:from-purple-600 hover:to-indigo-600 transition-all shadow-md hover:shadow-lg flex items-center"
-                    >
-                      <Plus className="w-5 h-5 mr-2" />
-                      Create Your First Gig
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {gigs.map((gig) => (
-                    <div
-                      key={gig.id}
-                      className="bg-white rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all relative group border border-gray-100"
-                    >
-                      {isOwner && (
-                        <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => setIsDropdownOpen(gig.id)}
-                            className="p-1 bg-white/80 backdrop-blur-sm rounded-full hover:bg-white"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          {isDropdownOpen === gig.id && (
-                            <div className="absolute top-full right-0 mt-1 bg-white shadow-lg rounded-lg overflow-hidden z-10 w-36">
-                              <button
-                                onClick={() => {
-                                  const updatedTitle = prompt("Update gig title:", gig.title)
-                                  if (updatedTitle)
-                                    handleUpdateItem("gigs", gig.id, {
-                                      ...gig,
-                                      title: updatedTitle,
-                                    })
-                                  setIsDropdownOpen(null)
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
-                              >
-                                <Edit className="w-4 h-4 mr-2 text-gray-500" />
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => {
-                                  handleDeleteItem("gigs", gig.id)
-                                  setIsDropdownOpen(null)
-                                }}
-                                className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500 flex items-center"
-                              >
-                                <X className="w-4 h-4 mr-2" />
-                                Delete
-                              </button>
-                            </div>
-                          )}
+                          ))}
                         </div>
                       )}
-                      <div className="aspect-video relative overflow-hidden bg-gradient-to-r from-purple-100 to-blue-100">
-                        <img
-                          src={`/placeholder.svg?height=200&width=400`}
-                          alt={gig.title}
-                          className="object-cover w-full h-full"
-                        />
-                      </div>
-                      <div className="p-6">
-                        <h3 className="font-semibold text-lg">{gig.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <div className="text-xl font-bold text-purple-600">
-                            ${typeof gig.pricing === 'string' ? JSON.parse(gig.pricing).basic : gig.pricing?.basic}
-                          </div>
-                          <div className="text-sm text-gray-500">Starting price</div>
-                        </div>
-                        <p className="mt-3 text-sm text-gray-600 line-clamp-3">{gig.description}</p>
-                        <div className="flex items-center gap-1 mt-4 text-sm">
-                          <Clock className="w-4 h-4 text-gray-500" />
-                          <span>Delivery in {gig.deliveryTime} days</span>
-                        </div>
-                        {gig.category && (
-                          <div className="mt-2 text-sm text-gray-500">
-                            Category: {gig.category}
-                          </div>
-                        )}
-                        {!isOwner && (
-                          <button className="w-full mt-4 py-2 px-4 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-md text-sm font-medium transition-all duration-300 shadow-sm hover:shadow">
-                            Order Now
-                          </button>
-                        )}
-                      </div>
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+
+            {/* Gigs Tab */}
+            {activeTab === "gigs" && (
+              <div>
+                <div className="flex justify-between items-center mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center">
+                      <Briefcase className="w-6 h-6 mr-3 text-gray-700" />
+                      Gigs
+                    </h2>
+                    <p className="text-gray-600 mt-1">Fixed-price services and packages</p>
+                  </div>
+                  {isOwner && (
+                    <button
+                      onClick={handleCreateGig}
+                      className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-colors flex items-center shadow-sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Gig
+                    </button>
+                  )}
+                </div>
+                {gigs.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-20 empty-state bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
+                    <div className="bg-gray-100 rounded-2xl p-8 mb-6 empty-state-icon">
+                      <Briefcase className="w-16 h-16 text-gray-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-700 mb-3">No gigs created yet</h3>
+                    <p className="text-center text-gray-500 max-w-md mb-8 leading-relaxed">
+                      Create gigs to offer your services with fixed prices and delivery times.
+                    </p>
+                    {isOwner && (
+                      <button
+                        onClick={handleCreateGig}
+                        className="px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl flex items-center"
+                      >
+                        <Plus className="w-5 h-5 mr-2" />
+                        Create Your First Gig
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {gigs.map((gig) => (
+                      <div
+                        key={gig.id}
+                        className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all relative group border border-gray-200"
+                      >
+                        {isOwner && (
+                          <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={() => setIsDropdownOpen(gig.id)}
+                              className="p-2 bg-white/90 backdrop-blur-sm rounded-xl hover:bg-white shadow-sm"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            {isDropdownOpen === gig.id && (
+                              <div className="absolute top-full right-0 mt-1 bg-white shadow-lg rounded-lg overflow-hidden z-10 w-36">
+                                <button
+                                  onClick={() => {
+                                    const updatedTitle = prompt("Update gig title:", gig.title)
+                                    if (updatedTitle)
+                                      handleUpdateItem("gigs", gig.id, {
+                                        ...gig,
+                                        title: updatedTitle,
+                                      })
+                                    setIsDropdownOpen(null)
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center"
+                                >
+                                  <Edit className="w-4 h-4 mr-2 text-gray-500" />
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    handleDeleteItem("gigs", gig.id)
+                                    setIsDropdownOpen(null)
+                                  }}
+                                  className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500 flex items-center"
+                                >
+                                  <X className="w-4 h-4 mr-2" />
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div className="aspect-video relative overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                          <img
+                            src={`/placeholder.svg?height=200&width=400`}
+                            alt={gig.title}
+                            className="object-cover w-full h-full"
+                          />
+                        </div>
+                        <div className="p-6">
+                          <h3 className="font-semibold text-lg text-gray-900 mb-2">{gig.title}</h3>
+                          <div className="flex items-center gap-2 mb-3">
+                            <div className="text-2xl font-bold text-gray-900">
+                              ${typeof gig.pricing === "string" ? JSON.parse(gig.pricing).basic : gig.pricing?.basic}
+                            </div>
+                            <div className="text-sm text-gray-500">Starting price</div>
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-3 mb-4">{gig.description}</p>
+                          <div className="flex items-center gap-1 text-sm text-gray-500 mb-2">
+                            <Clock className="w-4 h-4" />
+                            <span>Delivery in {gig.deliveryTime} days</span>
+                          </div>
+                          {gig.category && <div className="text-sm text-gray-500 mb-4">Category: {gig.category}</div>}
+                          {!isOwner && (
+                            <button className="w-full py-3 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-sm font-medium transition-all duration-300 shadow-sm hover:shadow">
+                              Order Now
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1445,8 +1553,8 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 modal-overlay">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden modal-content">
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-white">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden modal-content">
+        <div className="bg-gray-900 p-6 text-white">
           <div className="flex justify-between items-center">
             <h2 className="text-2xl font-semibold">Edit Your Profile</h2>
             <button onClick={onClose} className="text-white/80 hover:text-white">
@@ -1455,45 +1563,43 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
           </div>
           <p className="mt-2 text-white/80">Update your personal information and profile settings</p>
         </div>
-
         <div className="flex border-b">
           <button
             onClick={() => setActiveTab("profile")}
-            className={`flex-1 py-4 px-6 text-center font-medium flex items-center justify-center ${activeTab === "profile" ? "text-purple-600 border-b-2 border-purple-600" : "text-gray-500"}`}
+            className={`flex-1 py-4 px-6 text-center font-medium flex items-center justify-center ${activeTab === "profile" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500"}`}
           >
             <User className="w-5 h-5 mr-2" />
             Profile
           </button>
           <button
             onClick={() => setActiveTab("settings")}
-            className={`flex-1 py-4 px-6 text-center font-medium flex items-center justify-center ${activeTab === "settings" ? "text-purple-600 border-b-2 border-purple-600" : "text-gray-500"}`}
+            className={`flex-1 py-4 px-6 text-center font-medium flex items-center justify-center ${activeTab === "settings" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500"}`}
           >
             <Settings className="w-5 h-5 mr-2" />
             Settings
           </button>
           <button
             onClick={() => setActiveTab("badges")}
-            className={`flex-1 py-4 px-6 text-center font-medium flex items-center justify-center ${activeTab === "badges" ? "text-purple-600 border-b-2 border-purple-600" : "text-gray-500"}`}
+            className={`flex-1 py-4 px-6 text-center font-medium flex items-center justify-center ${activeTab === "badges" ? "text-gray-900 border-b-2 border-gray-900" : "text-gray-500"}`}
           >
             <Award className="w-5 h-5 mr-2" />
             Badges
           </button>
         </div>
-
         <div className="p-6 max-h-[70vh] overflow-y-auto">
           {activeTab === "profile" && (
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row gap-6">
                 <div className="flex flex-col items-center">
                   <div className="relative group">
-                    <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg ring-4 ring-purple-100">
+                    <div className="w-32 h-32 rounded-2xl overflow-hidden border-4 border-white shadow-lg ring-1 ring-gray-200">
                       <img
                         src={selectedImage || formData.profilePicture}
                         alt="Profile"
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <div className="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                       <button onClick={() => fileInputRef.current?.click()} className="p-2 bg-white/20 rounded-full">
                         <Edit className="w-5 h-5 text-white" />
                       </button>
@@ -1509,29 +1615,28 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                     />
                     <button
                       onClick={() => fileInputRef.current?.click()}
-                      className="px-3 py-1.5 text-sm bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors"
+                      className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                     >
                       Change
                     </button>
                     <button
                       onClick={handleDeleteImage}
-                      className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                      className="px-3 py-1.5 text-sm bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
                     >
                       Remove
                     </button>
                   </div>
                 </div>
-
                 <div className="flex-1 space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
                       <input
                         type="text"
                         value={formData.firstname}
                         onChange={(e) => setFormData({ ...formData, firstname: e.target.value })}
                         disabled={!canChangeName()}
-                        className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none transition-all ${!canChangeName() ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                        className={`w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all ${!canChangeName() ? "bg-gray-100 cursor-not-allowed" : ""}`}
                       />
                       {!canChangeName() && (
                         <p className="text-sm text-red-500 mt-1 flex items-center">
@@ -1541,54 +1646,51 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                       )}
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
                       <input
                         type="text"
                         value={formData.lastname}
                         onChange={(e) => setFormData({ ...formData, lastname: e.target.value })}
                         disabled={!canChangeName()}
-                        className={`w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none transition-all ${!canChangeName() ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                        className={`w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none transition-all ${!canChangeName() ? "bg-gray-100 cursor-not-allowed" : ""}`}
                       />
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Country</label>
                       <input
                         type="text"
                         value={formData.country}
                         onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                        className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                       <input
                         type="text"
                         value={formData.city}
                         onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                        className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                       />
                     </div>
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Hourly Rate ($)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Hourly Rate ($)</label>
                     <input
                       type="number"
                       value={formData.hourlyRate}
                       onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Bio</label>
                     <textarea
                       value={formData.bio}
                       onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                      className="w-full p-2.5 border rounded-md focus:ring-2 focus:ring-purple-300 focus:border-purple-500 outline-none min-h-[100px]"
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none min-h-[100px]"
                       placeholder="Tell clients about yourself..."
                     />
                   </div>
@@ -1596,12 +1698,11 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
               </div>
             </div>
           )}
-
           {activeTab === "settings" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-full">
+                  <div className="p-2 bg-blue-100 rounded-xl">
                     <Check className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
@@ -1616,13 +1717,12 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                     onChange={(e) => setFormData({ ...formData, isVerified: e.target.checked })}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-full">
+                  <div className="p-2 bg-green-100 rounded-xl">
                     <MessageCircle className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
@@ -1632,13 +1732,12 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={true} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 rounded-full">
+                  <div className="p-2 bg-amber-100 rounded-xl">
                     <Sparkles className="w-5 h-5 text-amber-600" />
                   </div>
                   <div>
@@ -1648,12 +1747,11 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" checked={true} className="sr-only peer" />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                 </label>
               </div>
             </div>
           )}
-
           {activeTab === "badges" && (
             <div className="space-y-4">
               <p className="text-sm text-gray-500">Select which badges to display on your profile.</p>
@@ -1661,10 +1759,10 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                 {updatedBadges.map((badge) => (
                   <div
                     key={badge.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border ${badge.isVisible ? "border-purple-200 bg-purple-50" : "border-gray-200"}`}
+                    className={`flex items-center justify-between p-4 rounded-xl border ${badge.isVisible ? "border-gray-300 bg-gray-50" : "border-gray-200"}`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${badge.isVisible ? "bg-purple-100" : "bg-gray-100"}`}>
+                      <div className={`p-2 rounded-xl ${badge.isVisible ? "bg-gray-200" : "bg-gray-100"}`}>
                         {badge.icon}
                       </div>
                       <div>
@@ -1684,7 +1782,7 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
                           }
                           className="sr-only peer"
                         />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-gray-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-900"></div>
                       </label>
                     )}
                   </div>
@@ -1693,17 +1791,16 @@ function EditProfileModal({ profile, badges, onSave, onClose }) {
             </div>
           )}
         </div>
-
-        <div className="flex justify-end gap-2 p-4 border-t bg-gray-50">
+        <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100 transition-colors"
+            className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-100 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-md hover:from-purple-600 hover:to-indigo-600 transition-all shadow-sm hover:shadow flex items-center"
+            className="px-4 py-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition-all shadow-sm hover:shadow flex items-center"
           >
             <Save className="w-4 h-4 mr-1" />
             Save Changes
@@ -1726,7 +1823,7 @@ function PortfolioItem({ item, isOwner, onDelete, onUpdate }) {
   }
 
   return (
-    <div className="group relative overflow-hidden rounded-lg bg-white shadow-sm hover:shadow-md transition-all duration-500 border border-gray-100 portfolio-item">
+    <div className="group relative overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-lg transition-all duration-500 border border-gray-200 portfolio-item">
       <div className="aspect-square relative overflow-hidden">
         {item.mediaType === "video" ? (
           <div className="w-full h-full bg-gray-900 flex items-center justify-center">
@@ -1749,13 +1846,13 @@ function PortfolioItem({ item, isOwner, onDelete, onUpdate }) {
         {isOwner && (
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="absolute top-2 right-2 bg-white/80 backdrop-blur-sm rounded-full p-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-xl p-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
           >
             <MoreVertical className="w-4 h-4" />
           </button>
         )}
         {isDropdownOpen && (
-          <div className="absolute top-10 right-2 bg-white shadow-lg rounded-lg overflow-hidden z-10 w-36">
+          <div className="absolute top-12 right-3 bg-white shadow-lg rounded-xl overflow-hidden z-10 w-36">
             <button
               onClick={() => {
                 const updatedTitle = prompt("Update title:", item.title)
@@ -1779,14 +1876,14 @@ function PortfolioItem({ item, isOwner, onDelete, onUpdate }) {
             </button>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-          <h3 className="font-medium text-white text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+          <h3 className="font-semibold text-white text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
             {item.title}
           </h3>
           <p className="text-sm text-white/80 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">
             {item.category}
           </p>
-          <div className="flex items-center justify-between mt-3 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-150">
+          <div className="flex items-center justify-between mt-4 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-150">
             <div className="flex items-center gap-1 text-white/90">
               <Heart className={cn("w-4 h-4", liked ? "fill-red-500 text-red-500" : "fill-white text-white")} />
               <span className="text-sm">{likeCount}</span>
@@ -1810,33 +1907,6 @@ function PortfolioItem({ item, isOwner, onDelete, onUpdate }) {
             </div>
           </div>
         </div>
-      </div>
-    </div>
-  )
-}
-
-// Review Card Component (unchanged for now)
-function ReviewCard({ review, index }) {
-  return (
-    <div
-      className="bg-white rounded-xl p-6 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-slide-up opacity-0"
-      style={{ animationDelay: `${index * 0.1}s` }}
-    >
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-semibold text-lg">{review.title}</h3>
-          <p className="text-sm text-gray-500">{review.date}</p>
-        </div>
-        <div className="flex">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Star key={star} className="w-4 h-4 fill-amber-400 text-amber-400" />
-          ))}
-        </div>
-      </div>
-      <p className="mt-3">{review.content}</p>
-      <div className="flex justify-between items-center mt-4 pt-4 border-t">
-        <div className="text-sm font-medium">{review.client}</div>
-        <div className="text-sm text-gray-500">{review.service}</div>
       </div>
     </div>
   )
