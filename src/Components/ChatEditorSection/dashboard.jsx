@@ -15,58 +15,7 @@ export default function ChatDashboard() {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false)
   const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [currentProject, setCurrentProject] = useState({
-    id: "proj-001",
-    name: "Promo Video",
-    progress: 60,
-    tasks: [
-      { id: "task-1", name: "Script Review", status: "Completed", hours: 2, cost: 100, dueDate: "2025-04-02" },
-      { id: "task-2", name: "Rough Cut", status: "In Progress", hours: 4, cost: 200, dueDate: "2025-04-05" },
-      { id: "task-3", name: "Color Grading", status: "Pending", hours: 3, cost: 150, dueDate: "2025-04-10" },
-    ],
-    drafts: [
-      { id: "draft-1", version: "v1.0", thumbnail: "/placeholder.svg?height=120&width=200", locked: false },
-      { id: "draft-2", version: "v1.1", thumbnail: "/placeholder.svg?height=120&width=200", locked: true },
-    ],
-    milestones: [
-      { id: "mile-1", name: "Script Approved", completed: true, icon: "FileCheck" },
-      { id: "mile-2", name: "Rough Cut Done", completed: true, icon: "Clapperboard" },
-      { id: "mile-3", name: "Final Delivery", completed: false, icon: "Package" },
-    ],
-    messages: [
-      {
-        id: "msg-1",
-        sender: "system",
-        content: "Project brief pinned",
-        isPinned: true,
-        timestamp: "10:00 AM",
-        reactions: [],
-      },
-      {
-        id: "msg-2",
-        sender: "client",
-        content: "Can we make the intro a bit faster?",
-        timestamp: "10:15 AM",
-        reactions: [],
-        replyTo: null,
-      },
-      {
-        id: "msg-3",
-        sender: "you",
-        content: "Sure, I'll adjust the pacing and send a new version this afternoon.",
-        timestamp: "10:20 AM",
-        reactions: [],
-        replyTo: "msg-2",
-      },
-    ],
-    notes: "",
-    timeline: [
-      { id: "timeline-1", title: "Project Kickoff", date: "2025-01-01", status: "completed" },
-      { id: "timeline-2", title: "First Draft", date: "2025-01-10", status: "completed" },
-      { id: "timeline-3", title: "Client Review", date: "2025-01-15", status: "in-progress" },
-      { id: "timeline-4", title: "Final Delivery", date: "2025-01-25", status: "pending" },
-    ],
-  })
+  const [currentProject, setCurrentProject] = useState(null);
 
   const handleNewTask = (task) => {
     setCurrentProject({
@@ -83,13 +32,13 @@ export default function ChatDashboard() {
   const handleProjectSelect = (project) => {
     setCurrentProject({
       ...project,
-      tasks: currentProject.tasks,
-      drafts: currentProject.drafts,
-      milestones: currentProject.milestones,
-      messages: currentProject.messages,
-      notes: currentProject.notes || "",
-      timeline: currentProject.timeline || [],
-    })
+      tasks: project.tasks || [],
+      drafts: project.drafts || [],
+      milestones: project.milestones || [],
+      messages: project.messages || [],
+      notes: project.notes || "",
+      timeline: project.timeline || [],
+    });
     setMobileMenuOpen(false)
   }
 

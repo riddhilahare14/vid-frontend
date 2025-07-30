@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "react-router-dom"
 import Sidebar from "./SideBar"
 import ProjectTracker from "./ProjectTracker"
 import Shortlist from "./ShortList"
@@ -9,8 +10,17 @@ import OverviewStats from "./Overview-stats"
 
 
 export default function ClientDashboard() {
+  const [searchParams] = useSearchParams();
   const [activeSection, setActiveSection] = useState("projects")
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // Handle tab parameter from URL
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'active') {
+      setActiveSection('projects');
+    }
+  }, [searchParams]);
 
   const renderContent = () => {
     switch (activeSection) {
@@ -28,7 +38,7 @@ export default function ClientDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 pt-20">
       <Sidebar
         activeSection={activeSection}
         setActiveSection={setActiveSection}
@@ -39,7 +49,7 @@ export default function ClientDashboard() {
       <div className={`transition-all duration-300 ${sidebarCollapsed ? "ml-20" : "ml-72"}`}>
         <DashboardHeader activeSection={activeSection} toggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} />
 
-        <main className="p-6 space-y-6">
+        <main className="p-6 space-y-6 pb-20">
           <OverviewStats />
           {renderContent()}
         </main>

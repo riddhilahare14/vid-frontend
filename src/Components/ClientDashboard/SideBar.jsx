@@ -11,7 +11,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, se
 
   return (
     <div
-      className={`fixed left-0 top-0 h-full bg-white/80 backdrop-blur-xl border-r border-gray-200/50 transition-all duration-300 z-50 ${collapsed ? "w-20" : "w-72"}`}
+      className={`fixed left-0 top-20 h-[calc(100vh-5rem)] bg-white/80 backdrop-blur-xl border-r border-gray-200/50 transition-all duration-300 z-40 ${collapsed ? "w-20" : "w-72"}`}
     >
       {/* Header */}
       <div className="p-6 border-b border-gray-200/50">
@@ -78,27 +78,7 @@ export default function Sidebar({ activeSection, setActiveSection, collapsed, se
         ))}
       </nav>
 
-      {/* User Profile */}
-      <div className="p-4 border-t border-gray-200/50">
-        {!collapsed ? (
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">John Doe</p>
-              <p className="text-xs text-gray-500">Enterprise Client</p>
-            </div>
-            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <LogOut className="w-4 h-4 text-gray-500" />
-            </button>
-          </div>
-        ) : (
-          <button className="w-full p-2 hover:bg-gray-100 rounded-lg transition-colors">
-            <User className="w-5 h-5 text-gray-500 mx-auto" />
-          </button>
-        )}
-      </div>
+      
     </div>
   )
 }

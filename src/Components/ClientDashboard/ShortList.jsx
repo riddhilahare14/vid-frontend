@@ -67,7 +67,28 @@ export default function Shortlist() {
         const jobsResponse = await axiosInstance.get("/jobs", { params: { status: "OPEN" } });
         console.log("[Shortlist] Jobs response:", JSON.stringify(jobsResponse.data, null, 2));
         const jobsData = jobsResponse.data.data?.jobs || [];
-        setJobs(jobsData);
+
+        // Fetch applicant count for each job
+        const jobsWithApplicantCount = await Promise.all(
+          jobsData.map(async (job) => {
+            try {
+              const applicantsResponse = await axiosInstance.get(`/jobs/${job.id}/applications`);
+              const applicantCount = applicantsResponse.data.data?.length || 0;
+              return {
+                ...job,
+                applicationCount: applicantCount
+              };
+            } catch (error) {
+              console.warn(`[Shortlist] Failed to fetch applicants for job ${job.id}:`, error);
+              return {
+                ...job,
+                applicationCount: 0
+              };
+            }
+          })
+        );
+
+        setJobs(jobsWithApplicantCount);
       } catch (error) {
         logError("Jobs fetch", error);
         const status = error.response?.status;
@@ -133,9 +154,9 @@ export default function Shortlist() {
         freelancerId: applicant.freelancerId,
       });
       toast.success(`Successfully hired ${applicant.name}`);
-      // Redirect to Active Projects tab
+      // Redirect to ProjectTracker Active tab
       setTimeout(() => {
-        navigate("/client-dashboard/project-tracker?tab=active");
+        navigate("/client-dashboard?tab=active");
       }, 2000);
     } catch (error) {
       logError(`Hire applicant ${applicant.id}`, error);

@@ -9,6 +9,14 @@ export default function RightPanel({ currentProject, setCurrentProject, isCollap
   const [searchQuery, setSearchQuery] = useState("")
   const fileInputRef = useRef(null)
 
+  if (!currentProject) {
+    return (
+      <div className="flex flex-1 items-center justify-center h-full text-slate-400 text-lg">
+        Nothing to show
+      </div>
+    );
+  }
+
   const fileCategories = [
     { id: "all", label: "All", count: 0 },
     { id: "raw", label: "Raw", count: 0 },
@@ -42,16 +50,16 @@ export default function RightPanel({ currentProject, setCurrentProject, isCollap
     })
   }
 
-  const filteredFiles = (currentProject.files || [])
+  const filteredFiles = (currentProject?.files || [])
     .filter((file) => fileCategory === "all" || file.category === fileCategory)
     .filter((file) => file.name.toLowerCase().includes(searchQuery.toLowerCase()))
 
   // Update category counts
   fileCategories.forEach((cat) => {
     if (cat.id === "all") {
-      cat.count = currentProject.files?.length || 0
+      cat.count = currentProject?.files?.length || 0
     } else {
-      cat.count = currentProject.files?.filter((file) => file.category === cat.id).length || 0
+      cat.count = currentProject?.files?.filter((file) => file.category === cat.id).length || 0
     }
   })
 

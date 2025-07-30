@@ -23,6 +23,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import axiosInstance from "../../utils/axios";
 
 export default function ClientJobs() {
   const navigate = useNavigate();
@@ -39,28 +40,65 @@ export default function ClientJobs() {
     const fetchJobs = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:3000/api/v1/client/jobs", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch jobs");
-        }
-
-        const data = await response.json();
-        setJobs(data);
+        const response = await axiosInstance.get("/applications/client/jobs");
+        const data = response.data.data;
+        // Fetch applicants for each job
+        const jobsWithApplicants = await Promise.all(
+          data.map(async (job) => {
+            try {
+              const applicantsResponse = await axiosInstance.get(`/jobs/${job.id}/applications`);
+              // Use .data.data.applications for compatibility with shortlist
+              const applicantsData = applicantsResponse.data.data?.applications || applicantsResponse.data.data || [];
+              return {
+                ...job,
+                applicants: applicantsData
+              };
+            } catch (error) {
+              return {
+                ...job,
+                applicants: []
+              };
+            }
+          })
+        );
+        setJobs(jobsWithApplicants);
+        setError(null);
         setLoading(false);
       } catch (err) {
-        setError(err.message);
+        setError("Something went wrong. Unable to fetch your jobs. Please try again later.");
         setLoading(false);
       }
     };
-
     fetchJobs();
   }, []);
+
+  // Hire and Reject handlers
+  const handleHire = async (applicant) => {
+    try {
+      await axiosInstance.post(`/jobs/${selectedJob.id}/accept`, { freelancerId: applicant.freelancerId });
+      // Refresh applicants list
+      const applicantsResponse = await axiosInstance.get(`/jobs/${selectedJob.id}/applications`);
+      const applicantsData = applicantsResponse.data.data?.applications || applicantsResponse.data.data || [];
+      setSelectedJob({ ...selectedJob, applicants: applicantsData });
+    } catch (error) {
+      alert("Failed to hire applicant. Please try again.");
+    }
+  };
+  const handleReject = async (applicant) => {
+    try {
+      await axiosInstance.post(`/jobs/${selectedJob.id}/reject`, { freelancerId: applicant.freelancerId });
+      // Refresh applicants list
+      const applicantsResponse = await axiosInstance.get(`/jobs/${selectedJob.id}/applications`);
+      const applicantsData = applicantsResponse.data.data?.applications || applicantsResponse.data.data || [];
+      setSelectedJob({ ...selectedJob, applicants: applicantsData });
+    } catch (error) {
+      alert("Failed to reject applicant. Please try again.");
+    }
+  };
+  const handleChat = (applicant) => {
+    // Implement chat navigation logic here
+    alert(`Start chat with freelancerId: ${applicant.freelancerId}`);
+  };
 
   const handleShowApplicants = (job) => {
     setSelectedJob(job);
@@ -178,7 +216,7 @@ export default function ClientJobs() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <Users className="w-4 h-4" />
-                  <span>{jobs.reduce((acc, job) => acc + (job.applicants?.length || 0), 0)} Total Applicants</span>
+                  <span>{jobs.reduce((acc, job) => acc + (job.applicantCount || 0), 0)} Total Applicants</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <TrendingUp className="w-4 h-4" />
@@ -350,8 +388,8 @@ export default function ClientJobs() {
                         </div>
                         <div>
                           <div className="font-semibold text-gray-800">
-                            {job.applicants?.length || 0} Applicant
-                            {!job.applicants || job.applicants.length !== 1 ? "s" : ""}
+                            {job.applicantCount || 0} Applicant
+                            {!job.applicantCount || job.applicantCount !== 1 ? "s" : ""}
                           </div>
                           <div className="text-sm text-gray-500">
                             {job.applicants?.filter((a) => a.status === "shortlisted").length || 0} shortlisted
@@ -368,11 +406,11 @@ export default function ClientJobs() {
                       <button
                         onClick={() => handleShowApplicants(job)}
                         className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
-                          job.applicants && job.applicants.length > 0
+                          job.applicantCount > 0
                             ? "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-xl"
                             : "bg-gray-100 text-gray-400 cursor-not-allowed"
                         }`}
-                        disabled={!job.applicants || job.applicants.length === 0}
+                        disabled={job.applicantCount === 0}
                       >
                         <Users className="w-4 h-4" />
                         View Applicants
@@ -392,18 +430,21 @@ export default function ClientJobs() {
         {/* Applicants Modal */}
         {showModal && selectedJob && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden relative">
               {/* Modal Header */}
-              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-6 sticky top-0 z-10">
                 <div className="flex justify-between items-center">
                   <div>
                     <h3 className="text-2xl font-bold mb-2">Applicants for {selectedJob.title}</h3>
                     <p className="text-indigo-100">
-                      {selectedJob.applicants?.length || 0} candidate
-                      {!selectedJob.applicants || selectedJob.applicants.length !== 1 ? "s" : ""} applied
+                      {selectedJob.applicantCount || 0} candidate
+                      {!selectedJob.applicantCount || selectedJob.applicantCount !== 1 ? "s" : ""} applied
                     </p>
                   </div>
-                  <button onClick={closeModal} className="p-2 hover:bg-white/20 rounded-xl transition-colors">
+                  <button
+                    onClick={closeModal}
+                    className="p-2 hover:bg-white/20 rounded-full transition-colors"
+                  >
                     <X className="w-6 h-6" />
                   </button>
                 </div>
@@ -411,7 +452,7 @@ export default function ClientJobs() {
 
               {/* Modal Content */}
               <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-                {!selectedJob.applicants || selectedJob.applicants.length === 0 ? (
+                {(!selectedJob.applicants || selectedJob.applicants.length === 0) ? (
                   <div className="text-center py-12">
                     <div className="bg-gray-100 p-6 rounded-2xl w-24 h-24 mx-auto mb-6 flex items-center justify-center">
                       <Users className="w-12 h-12 text-gray-400" />
@@ -422,81 +463,59 @@ export default function ClientJobs() {
                 ) : (
                   <div className="space-y-6">
                     {selectedJob.applicants.map((applicant) => (
-                      <div
-                        key={applicant.id}
-                        className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors"
-                      >
+                      <div key={applicant.id} className="bg-gray-50 rounded-2xl p-6 hover:bg-gray-100 transition-colors">
                         <div className="flex flex-col lg:flex-row lg:items-start gap-6">
                           {/* Applicant Info */}
                           <div className="flex-1">
                             <div className="flex items-start justify-between mb-4">
                               <div>
-                                <h4 className="text-xl font-bold text-gray-800 mb-1">{applicant.name}</h4>
-                                <p className="text-gray-600 mb-2">{applicant.email}</p>
+                                <h4 className="text-xl font-bold text-gray-800 mb-1">{applicant.freelancer ? `${applicant.freelancer.firstname} ${applicant.freelancer.lastname}` : `Applicant #${applicant.freelancerId}`}</h4>
                                 <div className="flex items-center gap-4 text-sm text-gray-500">
                                   <span className="flex items-center gap-1">
-                                    <Briefcase className="w-4 h-4" />
-                                    {applicant.experience}
-                                  </span>
-                                  <span className="flex items-center gap-1">
                                     <Calendar className="w-4 h-4" />
-                                    Applied {new Date(applicant.appliedAt).toLocaleDateString()}
+                                    Applied {applicant.createdAt ? new Date(applicant.createdAt).toLocaleDateString() : "N/A"}
                                   </span>
-                                  {applicant.rating && (
+                                  {applicant.freelancer?.rating && (
                                     <span className="flex items-center gap-1">
                                       <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                                      {applicant.rating}
+                                      {applicant.freelancer.rating}
                                     </span>
                                   )}
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
-                                <span
-                                  className={`px-3 py-1 rounded-full text-sm font-medium ${getApplicantStatusColor(applicant.status)}`}
-                                >
-                                  {applicant.status.charAt(0).toUpperCase() + applicant.status.slice(1)}
+                                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                                  applicant.status === "ACCEPTED"
+                                    ? "bg-green-100 text-green-800"
+                                    : applicant.status === "REJECTED"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-blue-100 text-blue-800"
+                                }`}>
+                                  {applicant.status ? applicant.status.charAt(0) + applicant.status.slice(1).toLowerCase() : "Pending"}
                                 </span>
                               </div>
                             </div>
-
-                            {/* Cover Letter */}
+                            {/* Proposal/Cover Letter */}
                             <div className="mb-4">
                               <h5 className="font-semibold text-gray-800 mb-2">Cover Letter:</h5>
                               <div className="bg-white p-4 rounded-xl border border-gray-200">
-                                <p className="text-gray-700 leading-relaxed">{applicant.coverLetter}</p>
+                                <p className="text-gray-700 leading-relaxed">{applicant.coverLetter || applicant.proposal || "No cover letter provided."}</p>
                               </div>
                             </div>
-
-                            {/* Portfolio Link */}
-                            {applicant.portfolio && (
-                              <div className="mb-4">
-                                <a
-                                  href={applicant.portfolio}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                  View Portfolio
-                                </a>
-                              </div>
-                            )}
                           </div>
-
                           {/* Action Buttons */}
                           <div className="flex flex-col gap-2 min-w-[160px]">
-                            <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
-                              Shortlist
-                            </button>
-                            <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                              Schedule Interview
-                            </button>
-                            <button className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium">
-                              Send Message
-                            </button>
-                            <button className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">
-                              Reject
-                            </button>
+                            {applicant.status === "ACCEPTED" ? (
+                              <button disabled className="px-4 py-2 bg-green-600 text-white rounded-lg cursor-not-allowed">Accepted</button>
+                            ) : applicant.status === "REJECTED" ? (
+                              <button disabled className="px-4 py-2 bg-red-600 text-white rounded-lg cursor-not-allowed">Rejected</button>
+                            ) : (
+                              <>
+                                <button onClick={() => handleHire(applicant)} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">Hire</button>
+                                <button onClick={() => handleChat(applicant)} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">Chat</button>
+                                <button onClick={() => handleReject(applicant)} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium">Reject</button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -509,7 +528,7 @@ export default function ClientJobs() {
               <div className="border-t border-gray-200 p-6 bg-gray-50">
                 <div className="flex justify-between items-center">
                   <div className="text-sm text-gray-500">
-                    Showing {selectedJob.applicants?.length || 0} of {selectedJob.applicants?.length || 0} applicants
+                    Showing {selectedJob.applicantCount || 0} of {selectedJob.applicantCount || 0} applicants
                   </div>
                   <div className="flex gap-3">
                     <button className="px-6 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">

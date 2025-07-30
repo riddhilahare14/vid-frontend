@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react"
 import { TopNavigation } from "./top-navigation"
 import { ProjectSidebar } from "./sidebar"
@@ -70,6 +69,21 @@ export function ClientWorkspace() {
   const [error, setError] = useState(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [projectFilter, setProjectFilter] = useState("all")
+  
+  // Mobile-specific state
+  const [activeView, setActiveView] = useState("projects") // "projects", "main", "chat"
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -100,7 +114,72 @@ export function ClientWorkspace() {
 
   const handleJobSelect = (job) => {
     setSelectedJob(job)
+    if (isMobile) {
+      setActiveView("main")
+    }
   }
+
+  const MobileNavigation = () => (
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 z-50">
+      <div className="flex">
+        <button
+          onClick={() => setActiveView("projects")}
+          className={`flex-1 py-3 px-4 text-center ${
+            activeView === "projects"
+              ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20"
+              : "text-gray-600 dark:text-gray-400"
+          }`}
+        >
+          <div className="text-xl mb-1">📁</div>
+          <div className="text-xs">Projects</div>
+        </button>
+        <button
+          onClick={() => setActiveView("main")}
+          disabled={!selectedJob}
+          className={`flex-1 py-3 px-4 text-center ${
+            activeView === "main"
+              ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20"
+              : "text-gray-600 dark:text-gray-400"
+          } ${!selectedJob ? "opacity-50" : ""}`}
+        >
+          <div className="text-xl mb-1">📋</div>
+          <div className="text-xs">Details</div>
+        </button>
+        <button
+          onClick={() => setActiveView("chat")}
+          disabled={!selectedJob}
+          className={`flex-1 py-3 px-4 text-center ${
+            activeView === "chat"
+              ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20"
+              : "text-gray-600 dark:text-gray-400"
+          } ${!selectedJob ? "opacity-50" : ""}`}
+        >
+          <div className="text-xl mb-1">💬</div>
+          <div className="text-xs">Chat</div>
+        </button>
+      </div>
+    </div>
+  )
+
+  const MobileHeader = () => (
+    <div className="md:hidden bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {activeView === "projects" && "Projects"}
+          {activeView === "main" && (selectedJob ? selectedJob.title : "Project Details")}
+          {activeView === "chat" && "Chat & Timeline"}
+        </h1>
+        {(activeView === "main" || activeView === "chat") && (
+          <button
+            onClick={() => setActiveView("projects")}
+            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+          >
+            ← Back
+          </button>
+        )}
+      </div>
+    </div>
+  )
 
   if (loading) {
     return (
@@ -115,7 +194,7 @@ export function ClientWorkspace() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900">
+      <div className="flex items-center justify-center h-screen bg-white dark:bg-gray-900 px-4">
         <div className="text-center">
           <div className="text-red-500 text-6xl mb-4">⚠️</div>
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Something went wrong</h2>
@@ -125,10 +204,75 @@ export function ClientWorkspace() {
     )
   }
 
+  // Mobile Layout
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
+        <MobileHeader />
+        
+        <div className="flex-1 overflow-hidden pb-16">
+          {/* Projects View */}
+          {activeView === "projects" && (
+            <div className="h-full overflow-hidden">
+              <ProjectSidebar
+                collapsed={false}
+                onToggleCollapse={() => {}}
+                activeJobs={activeJobs}
+                completedJobs={completedJobs}
+                selectedJobId={selectedJob?.id}
+                onSelectJob={handleJobSelect}
+                filter={projectFilter}
+                onFilterChange={setProjectFilter}
+                className="h-full"
+              />
+            </div>
+          )}
+
+          {/* Main Panel View */}
+          {activeView === "main" && (
+            <div className="h-full overflow-hidden">
+              {selectedJob ? (
+                <MainPanel job={selectedJob} />
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800 p-4">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-6xl mb-4">📁</div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No project selected</h2>
+                    <p className="text-gray-600 dark:text-gray-400">Choose a project to get started</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Chat View */}
+          {activeView === "chat" && (
+            <div className="h-full overflow-hidden">
+              {selectedJob ? (
+                <ChatTimeline job={selectedJob} />
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-800 p-4">
+                  <div className="text-center">
+                    <div className="text-gray-400 text-6xl mb-4">💬</div>
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">No project selected</h2>
+                    <p className="text-gray-600 dark:text-gray-400">Choose a project to view chat</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <MobileNavigation />
+      </div>
+    )
+  }
+
+  // Desktop Layout (unchanged)
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
       {/* Top Navigation */}
-     
+      {/* <TopNavigation /> */}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}

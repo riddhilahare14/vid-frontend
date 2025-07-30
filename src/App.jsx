@@ -63,6 +63,7 @@ const GigPaymentPage = lazy(() => import('./Components/GigSection/Payment-page')
 const Shortlist = lazy(() => import('./Components/ClientDashboard/ShortList'));
 const JobApplicants = lazy(() => import('./Components/ClientDashboard/JobApplicants'));
 const GigDetailWrapper = lazy(() => import('./Components/EditorGigDetail/gigDetail'));
+const CommunityDashboard = lazy(() => import('./Components/Community/community-dashboard'));
 
 function NavbarPage() {
   const user = useSelector((state) => state.user.user);
@@ -177,6 +178,7 @@ function NavbarPage() {
             <Route path="/client/workspace" element={<ChatClientDashboard />} />
             <Route path="/gigd" element={<GigDescriptionPage />} />
             <Route path="/gigs-dashboard/gig-detail/:gigId" element={<GigDetailWrapper />} />
+            <Route path="/community-dashboard" element={<CommunityDashboard />} />
             <Route path="/workspace" element={
                user?.role === "FREELANCER"
                 ? <ChatDashboard />

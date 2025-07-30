@@ -31,10 +31,12 @@ import {
 } from "lucide-react";
 import socketClient from "../../utils/socket.js";
 import axiosInstance from "../../utils/axios.js";
+import useAuth from "../../Hooks/useAuth.js";
 
 export default function MainPanel({ currentProject, setCurrentProject }) {
+  const user = useAuth();
   const [newMessage, setNewMessage] = useState("");
-  const [activeTab, setActiveTab] = useState("chat");
+  const [activeTab, setActiveTab] = useState(null);
   const [selectedDraft, setSelectedDraft] = useState(currentProject?.drafts?.[0] || null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [showDrafts, setShowDrafts] = useState(false);
@@ -67,12 +69,18 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
 
     socketClient.initialize(token);
     socketClient.connect();
-    socketClient.joinJobRoom(currentProject.id);
+    // Join room based on project type (order or job)
+    const roomId = currentProject.orderNumber ? `order-${currentProject.id}` : currentProject.id;
+    socketClient.joinJobRoom(roomId);
 
     // Fetch initial messages
     const fetchMessages = async () => {
       try {
-        const response = await axiosInstance.get(`/messages/job/${currentProject.id}`);
+        // Use different endpoint based on project type
+        const endpoint = currentProject.orderNumber 
+          ? `/messages/order/${currentProject.id}`
+          : `/messages/job/${currentProject.id}`;
+        const response = await axiosInstance.get(endpoint);
         if (response.data?.data) {
           setMessages(response.data.data);
           scrollToBottom();
@@ -128,7 +136,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
       socketClient.off("error");
       socketClient.disconnect();
     };
-  }, [currentProject?.id]);
+  }, [currentProject?.id, currentProject?.orderNumber]);
 
   // Auto-scroll to bottom
   const scrollToBottom = () => {
@@ -138,14 +146,15 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
   // Handle typing
   useEffect(() => {
     if (newMessage && currentProject?.id) {
-      socketClient.emitTyping(currentProject.id, true);
+      const roomId = currentProject.orderNumber ? `order-${currentProject.id}` : currentProject.id;
+      socketClient.emitTyping(roomId, true);
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => {
-        socketClient.emitTyping(currentProject.id, false);
+        socketClient.emitTyping(roomId, false);
       }, 2000);
     }
     return () => clearTimeout(typingTimeoutRef.current);
-  }, [newMessage, currentProject?.id]);
+  }, [newMessage, currentProject?.id, currentProject?.orderNumber]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -183,11 +192,13 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
       }
     }
 
-    socketClient.sendMessage(currentProject.id, newMessage, attachments, replyingTo?.id);
+    // Send message based on project type
+    const roomId = currentProject.orderNumber ? `order-${currentProject.id}` : currentProject.id;
+    socketClient.sendMessage(roomId, newMessage, attachments, replyingTo?.id);
     setNewMessage("");
     setFileUploads([]);
     setReplyingTo(null);
-    socketClient.emitTyping(currentProject.id, false);
+    socketClient.emitTyping(roomId, false);
   };
 
   const toggleDraftLock = async (draftId) => {
@@ -330,6 +341,14 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
     { id: "stream", label: "Live", icon: Video },
   ];
 
+  if (!currentProject) {
+    return (
+      <div className="flex flex-1 items-center justify-center h-full text-slate-400 text-lg">
+        Nothing to show
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-white dark:bg-slate-900">
       {/* Enhanced Header */}
@@ -340,24 +359,36 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-              {currentProject?.title || "Project Name"}
+              {currentProject?.title || currentProject?.name || "Project Name"}
             </h1>
             <div className="flex items-center space-x-3 mt-1">
+              {currentProject?.orderNumber && (
+                <span className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                  #{currentProject.orderNumber}
+                </span>
+              )}
               <span className="text-sm text-slate-600 dark:text-slate-400">
-                {currentProject?.postedBy
+                {currentProject?.client
+                  ? `${currentProject.client.firstname} ${currentProject.client.lastname}`
+                  : currentProject?.postedBy
                   ? `${currentProject.postedBy.firstname} ${currentProject.postedBy.lastname}`
                   : "Client Name"}
               </span>
               <span
                 className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  currentProject?.status === "In Progress"
+                  currentProject?.status === "CURRENT" || currentProject?.status === "In Progress"
                     ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                    : currentProject?.status === "Review"
+                    : currentProject?.status === "COMPLETED" || currentProject?.status === "Completed"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                    : currentProject?.status === "PENDING" || currentProject?.status === "Review"
                       ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                      : "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                      : "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400"
                 }`}
               >
-                {currentProject?.status || "In Progress"}
+                {currentProject?.status === "CURRENT" ? "In Progress" : 
+                 currentProject?.status === "COMPLETED" ? "Completed" :
+                 currentProject?.status === "PENDING" ? "Pending" :
+                 currentProject?.status || "Pending"}
               </span>
             </div>
           </div>
@@ -395,7 +426,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === "chat" && (
+        {activeTab && activeTab === "chat" && (
           <div className="h-full flex flex-col">
             {error && (
               <div className="p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 text-sm border-b border-red-200 dark:border-red-800">
@@ -417,10 +448,10 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
                 <div
                   key={message.id}
                   className={`flex items-start gap-3 ${
-                    message.sender?.id === currentProject?.freelancerId ? "justify-end" : "justify-start"
+                    message.sender?.id === user.id ? "justify-end" : "justify-start"
                   }`}
                 >
-                  {message.sender?.id !== currentProject?.freelancerId && (
+                  {message.sender?.id !== user.id && (
                     <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full overflow-hidden flex-shrink-0">
                       <img
                         src={message.sender?.avatar || "/placeholder.svg?height=40&width=40"}
@@ -434,8 +465,8 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
                     className={`relative max-w-[85%] lg:max-w-[70%] rounded-2xl p-3 lg:p-4 ${
                       message.isPinned
                         ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 border border-blue-200 dark:border-blue-700 w-full"
-                        : message.sender?.id === currentProject?.freelancerId
-                          ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg"
+                        : message.sender?.id === user.id
+                          ? "bg-gradient-to-r from-green-400 to-green-600 text-white shadow-lg"
                           : "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-md border border-slate-200 dark:border-slate-600"
                     } ${message.sentiment === "negative" ? "border-l-4 border-yellow-500" : ""} group hover:shadow-lg transition-all duration-200`}
                   >
@@ -443,7 +474,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
                     {message.replyTo && (
                       <div
                         className={`text-xs mb-2 pb-2 border-b ${
-                          message.sender?.id === currentProject?.freelancerId
+                          message.sender?.id === user.id
                             ? "border-blue-300 text-blue-100"
                             : "border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400"
                         } flex items-center`}
@@ -491,7 +522,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
                               {isAudio && <audio src={attachment.url} controls className="w-full" />}
                               <div
                                 className={`flex items-center justify-between p-2 text-xs ${
-                                  message.sender?.id === currentProject?.freelancerId ? "bg-blue-600" : "bg-slate-100 dark:bg-slate-600"
+                                  message.sender?.id === user.id ? "bg-blue-600" : "bg-slate-100 dark:bg-slate-600"
                                 }`}
                               >
                                 <div className="flex items-center gap-2 truncate">
@@ -579,7 +610,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
                           </div>
                         )}
                       </div>
-                      {message.sender?.id === currentProject?.freelancerId && !message.isDeleted && (
+                      {message.sender?.id === user.id && !message.isDeleted && (
                         <button
                           onClick={() => handleDeleteMessage(message.id)}
                           className="p-1 rounded-full bg-black/10 hover:bg-red-500/20 transition-colors"
@@ -590,7 +621,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
                     </div>
                   </div>
 
-                  {message.sender?.id === currentProject?.freelancerId && (
+                  {message.sender?.id === user.id && (
                     <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-full overflow-hidden flex-shrink-0">
                       <img
                         src={message.sender?.avatar || "/placeholder.svg?height=40&width=40"}
@@ -792,7 +823,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
           </div>
         )}
 
-        {activeTab === "tasks" && (
+        {activeTab && activeTab === "tasks" && (
           <div className="h-full flex flex-col">
             {/* Task Header */}
             <div className="p-4 lg:p-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
@@ -1005,7 +1036,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
           </div>
         )}
 
-        {activeTab === "notes" && (
+        {activeTab && activeTab === "notes" && (
           <div className="h-full flex flex-col">
             {/* Notes Header */}
             <div className="p-4 lg:p-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
@@ -1090,7 +1121,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
           </div>
         )}
 
-        {activeTab === "timeline" && (
+        {activeTab && activeTab === "timeline" && (
           <div className="h-full flex flex-col">
             {/* Timeline Header */}
             <div className="p-4 lg:p-6 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
@@ -1177,7 +1208,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
           </div>
         )}
 
-        {activeTab === "stream" && (
+        {activeTab && activeTab === "stream" && (
           <div className="h-full flex items-center justify-center p-4 lg:p-6">
             <div className="text-center max-w-md mx-auto">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">

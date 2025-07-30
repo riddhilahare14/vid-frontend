@@ -35,7 +35,11 @@ export default function LeftSidebar({
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
-    fetchActiveProjects();
+    // Only fetch if token exists
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetchActiveProjects();
+    }
     // Get user info from localStorage
     const userInfo = JSON.parse(localStorage.getItem("user"));
     setUser(userInfo);
@@ -49,26 +53,35 @@ export default function LeftSidebar({
   }, [projects, currentProject, onProjectSelect]);
 
   const fetchActiveProjects = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setError("Not authenticated. Please log in.");
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
-      const response = await axiosInstance.get("/jobs/active", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      console.log("Active jobs response:", response.data.data); // Debug log
+      let endpoint = "/orders/freelancer/active";
+      // Use user from state or localStorage
+      const userInfo = user || JSON.parse(localStorage.getItem("user"));
+      if (userInfo && userInfo.role === "CLIENT") {
+        endpoint = "/orders/client/active";
+      }
+      const response = await axiosInstance.get(endpoint);
+      console.log("Active orders response:", response.data.data); // Debug log
       const fetchedProjects = Array.isArray(response.data.data) ? response.data.data : [];
       // Map backend data to include status and progress if not provided
       const projectsWithStatus = fetchedProjects.map((project) => ({
         ...project,
-        status: project.status || inferStatus(project.deadline, project.completedAt),
-        progress: project.progress || calculateProgress(project.deadline, project.completedAt),
+        status: project.status || inferStatus(project.deliveryDeadline, project.completedAt),
+        progress: project.progress || calculateProgress(project.deliveryDeadline, project.completedAt),
       }));
       setProjects(projectsWithStatus);
       setError(null);
     } catch (err) {
-      setError("Failed to fetch active projects");
-      console.error("Error fetching active projects:", err);
+      setError("Failed to fetch active orders");
+      console.error("Error fetching active orders:", err);
       setProjects([]);
     } finally {
       setLoading(false);

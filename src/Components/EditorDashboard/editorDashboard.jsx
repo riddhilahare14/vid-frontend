@@ -425,9 +425,9 @@ export default function VideoEditorDashboard() {
                         >
                           <div className="flex justify-between items-start">
                             <div>
-                              <h3 className="font-semibold">{order.gig.title}</h3>
+                              <h3 className="font-semibold">{order.gig?.title || order.title || 'Untitled Order'}</h3>
                               <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                Client: {order.client.firstname} {order.client.lastname}
+                                Client: {order.client?.firstname || ''} {order.client?.lastname || ''}
                               </p>
                             </div>
                             <button
@@ -676,9 +676,9 @@ export default function VideoEditorDashboard() {
                             <FileText className="h-6 w-6" />
                           </div>
                           <div className="flex-grow min-w-0">
-                            <h3 className="font-medium truncate">{order.gig.title}</h3>
+                            <h3 className="font-medium truncate">{order.gig?.title || order.title || 'Untitled Order'}</h3>
                             <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                              Client: {order.client.firstname} {order.client.lastname}
+                              Client: {order.client?.firstname || ''} {order.client?.lastname || ''}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -731,9 +731,10 @@ export default function VideoEditorDashboard() {
                             <FileText className="h-6 w-6" />
                           </div>
                           <div className="flex-grow min-w-0">
-                            <h3 className="font-medium truncate">{order.gig.title}</h3>
+
+                            <h3 className="font-medium truncate">{order.gig?.title || order.title || 'Untitled Order'}</h3>
                             <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                              Client: {order.client.firstname} {order.client.lastname}
+                              Client: {order.client?.firstname || ''} {order.client?.lastname || ''}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">
@@ -853,7 +854,7 @@ export default function VideoEditorDashboard() {
                             <div>
                               <h3 className="font-semibold">{job.title}</h3>
                               <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                                Client: {job.client.firstname} {job.client.lastname}
+                                Client: {job.client?.firstname || ''} {job.client?.lastname || ''}
                               </p>
                             </div>
                             <button
@@ -961,7 +962,7 @@ export default function VideoEditorDashboard() {
                           <div className="flex-grow min-w-0">
                             <h3 className="font-medium truncate">{job.title}</h3>
                             <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                              Client: {job.client.firstname} {job.client.lastname}
+                              Client: {job.client?.firstname || ''} {job.client?.lastname || ''}
                             </p>
                             <div
                               className={`flex items-center gap-2 text-xs ${darkMode ? "text-gray-400" : "text-gray-500"}`}
@@ -1022,7 +1023,7 @@ export default function VideoEditorDashboard() {
                           <div className="flex-grow min-w-0">
                             <h3 className="font-medium truncate">{job.title}</h3>
                             <p className={`text-sm ${darkMode ? "text-gray-400" : "text-gray-500"}`}>
-                              Client: {job.client.firstname} {job.client.lastname}
+                              Client: {job.client?.firstname || ''} {job.client?.lastname || ''}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0">

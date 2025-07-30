@@ -151,7 +151,7 @@ const NavbarLinks = ({ activeSection, handleLinkClick, role }) => {
                     </div>
                   </Link>
                   <Link
-                    to="/gigs"
+                    to="/gigs-dashboard"
                     className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-600 transition-colors duration-200"
                     onClick={() => handleLinkClick("role")}
                   >

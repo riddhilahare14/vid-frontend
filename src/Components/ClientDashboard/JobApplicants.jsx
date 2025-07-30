@@ -166,9 +166,9 @@ export default function JobApplicants() {
 
         // Show success message
         toast.success("Applicant selected successfully! All other applicants have been notified.");
-        // Redirect to accepted jobs after a short delay
+        // Redirect to ProjectTracker Active tab after a short delay
         setTimeout(() => {
-          navigate('/client-dashboard/accepted-jobs');
+          navigate('/client-dashboard?tab=active');
         }, 2000);
       } else {
         throw new Error(response.data.message || 'Failed to select applicant');
