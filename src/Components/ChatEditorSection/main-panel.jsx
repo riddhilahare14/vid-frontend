@@ -56,10 +56,13 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
 
   // Validate currentProject.id and initialize socket
   useEffect(() => {
+
     if (!currentProject?.id || isNaN(currentProject.id)) {
-      setError("Invalid project ID. Please select a valid project.");
+      // setError("Invalid project ID. Please select a valid project.");
       return;
     }
+    // if (!currentProject?.id || isNaN(currentProject.id)) return null;
+
 
     const token = localStorage.getItem("token");
     if (!token) {
@@ -75,6 +78,7 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
 
     // Fetch initial messages
     const fetchMessages = async () => {
+      console.log("inside fetchMessages");
       try {
         // Use different endpoint based on project type
         const endpoint = currentProject.orderNumber 
@@ -248,16 +252,54 @@ export default function MainPanel({ currentProject, setCurrentProject }) {
 
   const handleAddReaction = async (messageId, emoji) => {
     try {
-      const response = await axiosInstance.post(`/messages/${messageId}/reactions`, { emoji });
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === messageId ? { ...msg, reactions: response.data.data.reactions } : msg
-        )
-      );
-      setShowEmojiPicker(null);
+      if (!messageId || !emoji) {
+        console.error("Missing messageId or emoji:", { messageId, emoji });
+        setError("Invalid reaction data");
+        return;
+      }
+      console.log("Adding reaction:", { messageId, emoji });
+      const response = await axiosInstance.post(`/messages/${messageId}/reactions`, { emoji: emoji.trim() });
+      
+      // console.log(response.data.data);
+
+      // setMessages((prev) =>
+      //   prev.map((msg) =>
+      //     msg.id === messageId ? { ...msg, reactions: response.data.data.reactions } : msg
+      //   )
+      // );
+      // setShowEmojiPicker(null);
+
+      if (response.data?.data?.reactions) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId 
+              ? { ...msg, reactions: response.data.data.reactions } 
+              : msg
+          )
+        );
+        setShowEmojiPicker(null);
+        setError(null); // Clear any previous errors
+      } else {
+        console.error("Invalid response structure:", response.data);
+        setError("Invalid response from server");
+      }
     } catch (error) {
+      // console.error("Error adding reaction:", error);
+      // setError("Failed to add reaction.");
       console.error("Error adding reaction:", error);
-      setError("Failed to add reaction.");
+      console.error("Error response:", error.response?.data);
+      console.error("Request details:", { messageId, emoji });
+      
+      // More specific error messages
+      if (error.response?.status === 404) {
+        setError("Message not found");
+      } else if (error.response?.status === 401) {
+        setError("Authentication required");
+      } else if (error.response?.status === 400) {
+        setError("Invalid reaction data");
+      } else {
+        setError(`Failed to add reaction: ${error.response?.data?.message || error.message}`);
+      }
     }
   };
 

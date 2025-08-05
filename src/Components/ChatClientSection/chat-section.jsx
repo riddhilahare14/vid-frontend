@@ -9,6 +9,8 @@ export function ChatSection({ job }) {
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState("")
   const [showEmojiPicker, setShowEmojiPicker] = useState(null)
+  const [showComposeEmojiPicker, setShowComposeEmojiPicker] = useState(false) // For message composition
+
   const [fileUploads, setFileUploads] = useState([])
   const [typingUsers, setTypingUsers] = useState([])
   const [replyingTo, setReplyingTo] = useState(null)
@@ -140,6 +142,7 @@ export function ChatSection({ job }) {
     setNewMessage("")
     setFileUploads([])
     setReplyingTo(null)
+    setShowComposeEmojiPicker(false) // Close compose emoji picker
     socketClient.emitTyping(job.id, false)
   }
 
@@ -158,18 +161,64 @@ export function ChatSection({ job }) {
     setReplyingTo(message)
   }
 
+  // const handleAddReaction = async (messageId, emoji) => {
+  //   try {
+  //     const response = await axiosInstance.post(`/messages/${messageId}/reactions`, { emoji })
+  //     setMessages((prev) =>
+  //       prev.map((msg) => (msg.id === messageId ? { ...msg, reactions: response.data.data.reactions } : msg)),
+  //     )
+  //     setShowEmojiPicker(null)
+  //   } catch (error) {
+  //     console.error("Error adding reaction:", error)
+  //     setError("Failed to add reaction.")
+  //   }
+  // }
+
   const handleAddReaction = async (messageId, emoji) => {
     try {
-      const response = await axiosInstance.post(`/messages/${messageId}/reactions`, { emoji })
-      setMessages((prev) =>
-        prev.map((msg) => (msg.id === messageId ? { ...msg, reactions: response.data.data.reactions } : msg)),
-      )
-      setShowEmojiPicker(null)
+      if (!messageId || !emoji) {
+        console.error("Missing messageId or emoji:", { messageId, emoji });
+        setError("Invalid reaction data");
+        return;
+      }
+      console.log("Adding reaction:", { messageId, emoji });
+      const response = await axiosInstance.post(`/messages/${messageId}/reactions`, { 
+        emoji: typeof emoji === 'string' ? emoji.trim() : emoji 
+      });
+
+      if (response.data?.data?.reactions) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === messageId 
+              ? { ...msg, reactions: response.data.data.reactions } 
+              : msg
+          )
+        );
+        setShowEmojiPicker(null);
+        setError(null); // Clear any previous errors
+      } else {
+        console.error("Invalid response structure:", response.data);
+        setError("Invalid response from server");
+      }
     } catch (error) {
-      console.error("Error adding reaction:", error)
-      setError("Failed to add reaction.")
+      // console.error("Error adding reaction:", error);
+      // setError("Failed to add reaction.");
+      console.error("Error adding reaction:", error);
+      console.error("Error response:", error.response?.data);
+      console.error("Request details:", { messageId, emoji });
+      
+      // More specific error messages
+      if (error.response?.status === 404) {
+        setError("Message not found");
+      } else if (error.response?.status === 401) {
+        setError("Authentication required");
+      } else if (error.response?.status === 400) {
+        setError("Invalid reaction data");
+      } else {
+        setError(`Failed to add reaction: ${error.response?.data?.message || error.message}`);
+      }
     }
-  }
+  };
 
   const handleDeleteMessage = async (messageId) => {
     try {
@@ -426,12 +475,14 @@ export function ChatSection({ job }) {
         )}
 
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0 relative">
-          {showEmojiPicker && (
+          {/* {showEmojiPicker && ( */}
+          {showComposeEmojiPicker && (
             <div className="absolute bottom-20 right-4 z-50">
               <EmojiPicker
                 onEmojiClick={(emojiData) => {
                   setNewMessage((prev) => prev + emojiData.emoji)
-                  setShowEmojiPicker(null)
+                  // setShowEmojiPicker(null)
+                  setShowComposeEmojiPicker(false)
                 }}
               />
             </div>

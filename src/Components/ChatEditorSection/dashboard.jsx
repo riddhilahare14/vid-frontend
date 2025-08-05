@@ -30,6 +30,7 @@ export default function ChatDashboard() {
   }
 
   const handleProjectSelect = (project) => {
+    if (!project || !project.id) return;
     setCurrentProject({
       ...project,
       tasks: project.tasks || [],
@@ -100,6 +101,7 @@ export default function ChatDashboard() {
           <div className="flex-1">
             <MainPanel currentProject={currentProject} setCurrentProject={setCurrentProject} />
           </div>
+
 
           {/* Right Panel */}
           <div

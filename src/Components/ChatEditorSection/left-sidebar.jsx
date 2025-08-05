@@ -37,11 +37,16 @@ export default function LeftSidebar({
   useEffect(() => {
     // Only fetch if token exists
     const token = localStorage.getItem("token");
+    const userInfo = JSON.parse(localStorage.getItem("user"));
+    console.log("🟢 On component mount:");
+    console.log("Token exists?", !!token);
+    console.log("User Info:", userInfo);
+
     if (token) {
       fetchActiveProjects();
     }
     // Get user info from localStorage
-    const userInfo = JSON.parse(localStorage.getItem("user"));
+    
     setUser(userInfo);
   }, []);
 
@@ -62,7 +67,8 @@ export default function LeftSidebar({
     }
     try {
       setLoading(true);
-      let endpoint = "/orders/freelancer/active";
+      // let endpoint = "/orders/freelancer/active";
+      let endpoint = "/jobs/active";
       // Use user from state or localStorage
       const userInfo = user || JSON.parse(localStorage.getItem("user"));
       if (userInfo && userInfo.role === "CLIENT") {
@@ -87,6 +93,41 @@ export default function LeftSidebar({
       setLoading(false);
     }
   };
+
+  // const fetchActiveProjects = async () => {
+  //   const token = localStorage.getItem("token");
+  //   if (!token) {
+  //     setError("Not authenticated. Please log in.");
+  //     setLoading(false);
+  //     return;
+  //   }
+  
+  //   const userInfo = user || JSON.parse(localStorage.getItem("user"));
+  //   let endpoint = "/orders/freelancer/active";
+  
+  //   if (userInfo && userInfo.role === "CLIENT") {
+  //     endpoint = "/orders/client/active";
+  //   }
+  
+  //   // ✅ Add these debug logs
+  //   console.log("📦 Token:", token);
+  //   console.log("👤 User Info:", userInfo);
+  //   console.log("🌐 Endpoint being hit:", endpoint);
+  
+  //   try {
+  //     const response = await axiosInstance.get(endpoint);
+  
+  //     console.log("✅ Response data:", response.data); // Check response structure
+  
+  //     setProjects(response.data.data);
+  //     setLoading(false);
+  //   } catch (err) {
+  //     console.error("❌ Error fetching active orders:", err.response?.data || err.message);
+  //     setError("Failed to fetch active orders.");
+  //     setLoading(false);
+  //   }
+  // };
+  
 
   // Infer status based on deadline and completion
   const inferStatus = (deadline, completedAt) => {

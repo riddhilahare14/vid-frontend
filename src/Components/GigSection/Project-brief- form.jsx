@@ -19,6 +19,7 @@ export default function ProjectBriefForm() {
   const navigate = useNavigate();
 
   const location = useLocation();
+  console.log("Received in payment page:", location.state);
   const gig = location.state?.gig;
   const pkg = location.state?.pkg;
   console.log("Gig ID:", gigId);
@@ -113,7 +114,7 @@ export default function ProjectBriefForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    console.log("In handleSubmit()");
     try {
       // 1️⃣ Build payload
       const payload = {
@@ -139,6 +140,7 @@ export default function ProjectBriefForm() {
   
       // 2️⃣ Make API request
       const res = await axiosInstance.post("/orders", payload);
+      console.log("Received response", res);
   
       if (res.status === 201) {
         const order = res.data.data;
